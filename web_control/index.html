@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP32-C3 Servo Tester & Telemetry Lab</title>
+    <!-- Tailwind CSS CDN for utility-first responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter for UI and JetBrains Mono for signal metrics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        // Custom Tailwind CSS Theme Extensions
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: {
+                            900: '#0B0F17',
+                            800: '#111827',
+                            700: '#1F2937',
+                            600: '#374151'
+                        },
+                        neon: {
+                            cyan: '#00F3FF',
+                            green: '#00FF66',
+                            yellow: '#FFD700',
+                            crimson: '#FF2E63',
+                            purple: '#A855F7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Base styles & mobile touch optimizations */
+        body {
+            background-color: #0B0F17;
+            color: #E5E7EB;
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* Prevent scroll gestures during knob interaction */
+        .touch-no-scroll {
+            touch-action: none !important;
+        }
+
+        /* Tactile 3D Skeuomorphic Button FX */
+        .btn-3d {
+            background: linear-gradient(145deg, #1f293d, #121926);
+            box-shadow: 3px 3px 7px #070a0f, -3px -3px 7px #1b263b, inset 0px 1px 0px rgba(255, 255, 255, 0.1);
+            transition: all 0.15s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .btn-3d:active, .btn-3d.active {
+            background: linear-gradient(145deg, #0d131d, #161e2e);
+            box-shadow: inset 3px 3px 6px #06090e, inset -3px -3px 6px #1c283c, 0 0 10px rgba(0, 243, 255, 0.2);
+            border-color: rgba(0, 243, 255, 0.4);
+            transform: translateY(1px);
+        }
+
+        /* Test Mode Active Tab Highlight */
+        .tab-active {
+            background: linear-gradient(180deg, rgba(0, 243, 255, 0.15) 0%, rgba(0, 243, 255, 0.02) 100%);
+            border-bottom: 2px solid #00F3FF;
+            color: #00F3FF;
+            box-shadow: 0 4px 15px -2px rgba(0, 243, 255, 0.3);
+        }
+
+        /* 3D Skeuomorphic Dial Outer Ring */
+        .knob-container {
+            background: radial-gradient(circle at 35% 35%, #2a364f 0%, #111827 70%, #080c14 100%);
+            box-shadow: 
+                8px 12px 25px rgba(0,0,0,0.8),
+                -6px -6px 15px rgba(255,255,255,0.03),
+                inset 2px 2px 4px rgba(255,255,255,0.1),
+                inset -4px -4px 8px rgba(0,0,0,0.8);
+        }
+
+        .knob-face {
+            background: conic-gradient(from 180deg at 50% 50%, #1a2333 0deg, #28354d 120deg, #121927 240deg, #1a2333 360deg);
+            box-shadow: 
+                inset 0 0 12px rgba(0,0,0,0.9),
+                0 4px 8px rgba(0,0,0,0.5);
+        }
+
+        /* Neon Text Glow Effects */
+        .glow-cyan { text-shadow: 0 0 10px rgba(0, 243, 255, 0.6); }
+        .glow-green { text-shadow: 0 0 10px rgba(0, 255, 102, 0.6); }
+        .glow-crimson { text-shadow: 0 0 10px rgba(255, 46, 99, 0.6); }
+
+        /* Oscilloscope CRT Grid Background Texture */
+        .oscilloscope-bg {
+            background-color: #050a12;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.06) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Range Slider Custom Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #111827;
+            height: 8px;
+            border-radius: 4px;
+            border: 1px solid #1F2937;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #00F3FF;
+            box-shadow: 0 0 10px #00F3FF;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+        }
+    </style>
+</head>
+<body class="h-screen max-h-screen overflow-hidden flex flex-col justify-start max-w-md mx-auto relative border-x border-slate-800/50 shadow-2xl">
+
+    <!-- Top Navigation Header -->
+    <header class="p-2.5 bg-obsidian-800/90 backdrop-blur border-b border-obsidian-700 sticky top-0 z-30 shrink-0">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-microchip text-slate-900 font-bold text-xs"></i>
+                </div>
+                <div>
+                    <h1 class="text-xs font-bold tracking-wider text-white uppercase flex items-center gap-1.5">
+                        ESP32-C3 <span class="text-[9px] px-1 py-0.5 rounded bg-cyan-950 text-neon-cyan border border-cyan-800/50">SERVO LAB</span>
+                    </h1>
+                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v1.18</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-1.5">
+                <!-- Global Bluetooth Connection Management Area -->
+                <div class="flex items-center bg-obsidian-900/80 border border-slate-700/60 rounded-lg p-0.5 space-x-1" title="Bluetooth Connection Status & Toggle">
+                    <span id="headerBleDot" class="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>
+                    <button id="headerBleBtn" onclick="toggleBleConnection()" class="btn-3d w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-neon-cyan active:scale-95 transition-colors" title="Bluetooth Connection (Connect/Disconnect)">
+                        <i id="headerBleIcon" class="fa-brands fa-bluetooth-b text-xs text-slate-400"></i>
+                    </button>
+                </div>
+
+                <!-- OTA Firmware Update Modal Button -->
+                <button onclick="toggleOtaModal(true)" class="btn-3d w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-neon-cyan active:scale-95 transition-colors" title="OTA Firmware Update">
+                    <i class="fa-solid fa-cloud-arrow-up text-xs text-neon-cyan"></i>
+                </button>
+
+                <!-- Hardware Settings Modal Button -->
+                <button onclick="toggleConfigModal(true)" class="btn-3d w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white active:scale-95" title="Hardware Settings">
+                    <i class="fa-solid fa-gear text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-0 flex-1 overflow-y-auto min-h-0 flex flex-col justify-start space-y-0 rounded-xl overflow-hidden border border-slate-800 bg-obsidian-900/50 divide-y divide-slate-800">
+
+        <!-- Mode Navigation Tabs -->
+        <section class="grid grid-cols-3 gap-1 p-1 bg-obsidian-800 text-xs font-semibold text-slate-400 shrink-0">
+            <button id="tab-manual" onclick="setTestMode('manual')" class="tab-active py-2 rounded-lg text-center transition flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-hand-pointer text-xs"></i>
+                <span>Manual</span>
+            </button>
+            <button id="tab-sweep" onclick="setTestMode('sweep')" class="py-2 rounded-lg text-center transition flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                <span>Sweep</span>
+            </button>
+            <button id="tab-step" onclick="setTestMode('step')" class="py-2 rounded-lg text-center transition flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-bolt text-xs"></i>
+                <span>Step Jump</span>
+            </button>
+        </section>
+
+        <!-- Live Signal Telemetry Cards -->
+        <section class="grid grid-cols-3 gap-1 p-1.5 bg-obsidian-900/80 shrink-0">
+            <!-- Active Pulse Width Metric -->
+            <div class="bg-obsidian-800/80 border border-slate-800 p-2 rounded-xl flex flex-col justify-between relative overflow-hidden">
+                <div class="text-[9px] uppercase font-mono tracking-wider text-slate-400">PULSE WIDTH</div>
+                <div class="flex items-baseline space-x-0.5 my-0.2">
+                    <span id="telemetryPulse" class="text-lg font-bold font-mono text-neon-crimson glow-crimson">OFF</span>
+                    <span id="telemetryPulseUnit" class="text-[9px] text-slate-400 font-mono hidden">µs</span>
+                </div>
+                <div class="text-[10px] font-semibold text-slate-400">PWM Output</div>
+            </div>
+
+            <!-- Duty Cycle & PWM Frequency Metric -->
+            <div class="bg-obsidian-800/80 border border-slate-800 p-2 rounded-xl flex flex-col justify-between">
+                <div class="text-[9px] uppercase font-mono tracking-wider text-slate-400">DUTY / FREQ</div>
+                <div class="flex items-baseline space-x-0.5 my-0.2">
+                    <span id="telemetryDuty" class="text-lg font-bold font-mono text-neon-yellow">0.0</span>
+                    <span class="text-[9px] text-slate-400 font-mono">%</span>
+                </div>
+                <div id="telemetryFreq" class="text-[10px] font-semibold text-slate-300">50 Hz (20ms)</div>
+            </div>
+
+            <!-- PWM Signal Output Pin & RSSI Card -->
+            <div class="bg-obsidian-800/80 border border-slate-800 p-2 rounded-xl flex flex-col justify-between">
+                <div class="text-[9px] uppercase font-mono tracking-wider text-slate-400">SIGNAL / RSSI</div>
+                <div class="flex items-baseline space-x-0.5 my-0.2">
+                    <span id="telemetryRssi" class="text-lg font-bold font-mono text-neon-green">---</span>
+                    <span class="text-[9px] text-slate-400 font-mono">dBm</span>
+                </div>
+                <div id="telemetryPinSub" class="text-[10px] font-semibold text-slate-400">GPIO 0 Output</div>
+            </div>
+        </section>
+
+        <!-- Dynamic Oscilloscope Waveform Display -->
+        <section class="bg-obsidian-800 p-2 relative overflow-hidden shadow-inner shrink-0">
+            <div class="flex items-center justify-between mb-1 text-xs font-mono">
+                <div class="flex items-center space-x-1.5 text-slate-300">
+                    <span id="oscilloscopePulseDot" class="w-1.5 h-1.5 rounded-full bg-neon-crimson"></span>
+                    <span class="font-bold text-[10px] uppercase tracking-wide">PWM SIGNAL WAVEFORM</span>
+                </div>
+                <span id="periodText" class="text-[9px] text-cyan-400/80 bg-cyan-950/40 px-1 py-0.5 rounded border border-cyan-900/40">T = 20.00 ms</span>
+            </div>
+
+            <!-- Oscilloscope Canvas Container -->
+            <div class="relative w-full h-36 sm:h-40 rounded-lg overflow-hidden border border-slate-800 oscilloscope-bg">
+                <canvas id="waveformCanvas" class="w-full h-full block"></canvas>
+                <!-- Scanline Effect Overlay -->
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/[0.03] to-transparent opacity-50"></div>
+            </div>
+
+            <!-- Signal Annotations -->
+            <div class="flex justify-between items-center text-[9px] font-mono text-slate-400 mt-1 px-0.5">
+                <div>THIGH: <span id="tHighText" class="text-neon-cyan font-semibold">0.00 ms</span></div>
+                <div>TLOW: <span id="tLowText" class="text-slate-300">20.00 ms</span></div>
+                <div>BOUNDS: <span id="boundsText" class="text-slate-400">500 - 2500 µs</span></div>
+            </div>
+        </section>
+
+        <!-- Interactive Controls Container -->
+        <section id="controlPanel" class="bg-obsidian-800/90 p-2.5 relative shadow-xl touch-no-scroll shrink-0">
+            
+            <!-- MODE 1: MANUAL ROTARY CONTROL PANEL -->
+            <div id="mode-manual-container" class="space-y-2">
+                <!-- 3D Rotary Knob Display -->
+                <div class="flex flex-col items-center justify-center relative py-1">
+                    
+                    <!-- 3D Rotary Knob Outer Dial Shell -->
+                    <div id="knobOuter" class="knob-container w-44 h-44 rounded-full flex items-center justify-center relative touch-no-scroll cursor-pointer hover:cursor-grab active:cursor-grabbing">
+                        <div class="absolute inset-1.5 rounded-full border border-slate-700/40"></div>
+                        
+                        <!-- Rotating Dial Face (Rotates marker needle) -->
+                        <div id="knobFace" style="transform: rotate(0deg);" class="knob-face w-[154px] h-[154px] rounded-full flex flex-col items-center justify-center absolute transform transition-transform duration-75">
+                            <div id="knobNeedle" class="absolute top-1.5 w-1.5 h-5 bg-slate-600 rounded-full transition-colors duration-200"></div>
+                        </div>
+
+                        <!-- Stationary Display Text -->
+                        <div class="text-center pointer-events-none z-10 flex flex-col items-center justify-center">
+                            <div id="knobPulseText" class="text-[13px] font-bold font-mono text-neon-crimson glow-crimson transition-colors duration-200">PWM OFF</div>
+                            <div id="knobStatusBadge" class="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-950 text-neon-crimson border border-rose-800/50 mt-0.5">PWM OFF</div>
+                        </div>
+                    </div>
+
+                    <p class="text-[9px] text-slate-400 mt-1 font-mono flex items-center gap-1">
+                        <i class="fa-solid fa-hand-pointer text-cyan-400"></i> Tap center to toggle PWM ON/OFF
+                    </p>
+                </div>
+
+                <!-- Micro Stepping Fine-Adjustment Buttons -->
+                <div class="space-y-1">
+                    <div class="text-[9px] font-mono uppercase text-slate-400 tracking-wider text-center">MICRO ADJUSTMENT STEPPING</div>
+                    <div class="grid grid-cols-6 gap-1">
+                        <button onclick="adjustPulse(-50)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-slate-200">-50</button>
+                        <button onclick="adjustPulse(-10)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-slate-200">-10</button>
+                        <button onclick="adjustPulse(-1)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-neon-cyan">-1</button>
+                        <button onclick="adjustPulse(1)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-neon-cyan">+1</button>
+                        <button onclick="adjustPulse(10)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-slate-200">+10</button>
+                        <button onclick="adjustPulse(50)" class="manual-btn btn-3d py-2 rounded-lg text-[14px] font-mono font-bold text-slate-200">+50</button>
+                    </div>
+                </div>
+
+                <!-- Quick Position Angle Presets -->
+                <div class="space-y-1">
+                    <div class="text-[9px] font-mono uppercase text-slate-400 tracking-wider text-center">QUICK POSITION PRESETS</div>
+                    <div class="grid grid-cols-5 gap-1">
+                        <button onclick="setAnglePreset(0)" class="preset-btn btn-3d py-1.5 rounded-lg text-xs font-semibold text-slate-300">MIN</button>
+                        <button onclick="setAnglePreset(45)" class="preset-btn btn-3d py-1.5 rounded-lg text-xs font-semibold text-slate-300">25%</button>
+                        <button onclick="setAnglePreset(90)" class="preset-btn btn-3d py-1.5 rounded-lg text-xs font-semibold text-neon-cyan font-bold">CENTER</button>
+                        <button onclick="setAnglePreset(135)" class="preset-btn btn-3d py-1.5 rounded-lg text-xs font-semibold text-slate-300">75%</button>
+                        <button onclick="setAnglePreset(180)" class="preset-btn btn-3d py-1.5 rounded-lg text-xs font-semibold text-slate-300">MAX</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE 2: AUTO SWEEP / ENDURANCE TEST -->
+            <div id="mode-sweep-container" class="hidden space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Burn-In Sweep</span>
+                            <span id="sweepPwmWarning" class="text-[8px] font-mono px-1 py-0.2 rounded bg-rose-950 text-neon-crimson border border-rose-800/50">PWM OFF</span>
+                        </h3>
+                        <p class="text-[10px] text-slate-400">Continuous MIN to MAX sweep testing</p>
+                    </div>
+                    <!-- Start/Stop Sweep Button -->
+                    <button id="sweepToggleBtn" onclick="toggleAutoSweep()" class="px-3.5 py-1.5 rounded-xl bg-neon-cyan text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/30 flex items-center gap-1.5 active:scale-95 transition">
+                        <i id="sweepIcon" class="fa-solid fa-play"></i>
+                        <span id="sweepBtnText">Start Sweep</span>
+                    </button>
+                </div>
+
+                <!-- Sweep Speed & Dwell Sliders -->
+                <div class="space-y-2">
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-400">SIGNAL SLEW RATE</span>
+                            <span id="sweepSpeedVal" class="text-neon-cyan font-bold">1000 µs/s</span>
+                        </div>
+                        <input type="range" id="sweepSpeedSlider" min="200" max="5000" step="100" value="1000" oninput="updateSweepSpeed(this.value)" class="w-full">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-slate-400">ENDPOINT DWELL TIME</span>
+                            <span id="sweepDwellVal" class="text-neon-yellow font-bold">250 ms</span>
+                        </div>
+                        <input type="range" id="sweepDwellSlider" min="0" max="2000" step="50" value="250" oninput="updateSweepDwell(this.value)" class="w-full">
+                    </div>
+                </div>
+
+                <!-- Sweep Cycle Telemetry -->
+                <div class="bg-obsidian-900/90 rounded-xl p-2.5 border border-slate-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-mono text-slate-400 uppercase">COMPLETED CYCLES</div>
+                        <div id="cycleCounter" class="text-xl font-mono font-bold text-neon-green glow-green">00000</div>
+                    </div>
+                    <button onclick="resetCycleCounter()" class="btn-3d px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODE 3: STEP RESPONSE TEST PANEL -->
+            <div id="mode-step-container" class="hidden space-y-3">
+                <div class="border-b border-slate-800 pb-2 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Step Jump Test</span>
+                            <span id="stepPwmWarning" class="text-[8px] font-mono px-1 py-0.2 rounded bg-rose-950 text-neon-crimson border border-rose-800/50">PWM OFF</span>
+                        </h3>
+                        <p class="text-[10px] text-slate-400">Evaluate dynamic step response and slew rate</p>
+                    </div>
+                </div>
+
+                <!-- Step Jump Action Buttons -->
+                <div class="grid grid-cols-3 gap-2">
+                    <button id="stepMinBtn" onclick="triggerStepJump(minPulse)" class="step-btn btn-3d py-2.5 rounded-xl text-xs font-bold text-slate-200">
+                        JUMP MIN
+                    </button>
+                    <button id="stepCenterBtn" onclick="triggerStepJump(centerPulse)" class="step-btn btn-3d py-2.5 rounded-xl text-xs font-bold text-neon-cyan">
+                        JUMP CENTER
+                    </button>
+                    <button id="stepMaxBtn" onclick="triggerStepJump(maxPulse)" class="step-btn btn-3d py-2.5 rounded-xl text-xs font-bold text-slate-200">
+                        JUMP MAX
+                    </button>
+                </div>
+
+                <div class="bg-obsidian-900/90 p-2.5 rounded-xl border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div class="flex justify-between text-slate-300">
+                        <span>Last Step Delta:</span>
+                        <span id="stepDeltaVal" class="text-white font-bold">1000 µs</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>Est. Transit Time:</span>
+                        <span id="transitTimeVal" class="text-neon-green font-bold">0.12 sec</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Hardware & PWM Limits Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-obsidian-800 border border-slate-700 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-neon-cyan text-sm"></i>
+                    <h2 class="text-sm font-bold text-white uppercase tracking-wider">Hardware & PWM Limits Config</h2>
+                </div>
+                <button onclick="toggleConfigModal(false)" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- PWM Limits Form -->
+            <div class="space-y-3 font-mono text-xs">
+                
+                <!-- Min Pulse Boundary -->
+                <div>
+                    <label class="block text-slate-400 mb-1">MIN PULSE BOUNDARY:</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" id="cfgMinPulse" value="500" min="400" max="1100" class="bg-obsidian-900 border border-slate-700 rounded-lg p-2 text-white w-full font-mono text-sm focus:border-neon-cyan outline-none">
+                        <span class="text-slate-400">µs</span>
+                    </div>
+                </div>
+
+                <!-- Center Pulse Boundary -->
+                <div>
+                    <label class="block text-slate-400 mb-1">CENTER / NEUTRAL PULSE:</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" id="cfgCenterPulse" value="1500" min="1300" max="1700" class="bg-obsidian-900 border border-slate-700 rounded-lg p-2 text-white w-full font-mono text-sm focus:border-neon-cyan outline-none">
+                        <span class="text-slate-400">µs</span>
+                    </div>
+                </div>
+
+                <!-- Max Pulse Boundary -->
+                <div>
+                    <label class="block text-slate-400 mb-1">MAX PULSE BOUNDARY:</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" id="cfgMaxPulse" value="2500" min="1900" max="2600" class="bg-obsidian-900 border border-slate-700 rounded-lg p-2 text-white w-full font-mono text-sm focus:border-neon-cyan outline-none">
+                        <span class="text-slate-400">µs</span>
+                    </div>
+                </div>
+
+                <!-- Refresh Rate Frequency -->
+                <div>
+                    <label class="block text-slate-400 mb-1">PWM REFRESH FREQUENCY:</label>
+                    <select id="cfgFrequency" class="bg-obsidian-900 border border-slate-700 rounded-lg p-2 text-white w-full font-mono text-sm focus:border-neon-cyan outline-none">
+                        <option value="50">50 Hz (Standard Analog - 20ms)</option>
+                        <option value="100">100 Hz (Digital Servo - 10ms)</option>
+                        <option value="200">200 Hz (High Speed Digital - 5ms)</option>
+                        <option value="333">333 Hz (Tail Rotor Digital - 3ms)</option>
+                        <option value="500">500 Hz (Ultra High Speed - 2ms)</option>
+                    </select>
+                </div>
+
+                <!-- PWM Signal Output GPIO Pin -->
+                <div>
+                    <label class="block text-slate-400 mb-1">PWM OUTPUT GPIO PIN:</label>
+                    <select id="cfgGpioPin" class="bg-obsidian-900 border border-slate-700 rounded-lg p-2 text-white w-full font-mono text-sm focus:border-neon-cyan outline-none">
+                        <option value="0" selected>GPIO 0 (Recommended Default)</option>
+                        <option value="1">GPIO 1 (Safe PWM)</option>
+                        <option value="2">GPIO 2 (ADC / Strapping Pin)</option>
+                        <option value="3">GPIO 3 (Safe PWM)</option>
+                        <option value="4">GPIO 4 (Safe PWM)</option>
+                        <option value="5" disabled>GPIO 5 (Reserved - OLED SDA)</option>
+                        <option value="6" disabled>GPIO 6 (Reserved - OLED SCL)</option>
+                        <option value="7">GPIO 7 (Safe PWM)</option>
+                        <option value="8">GPIO 8 (Onboard LED / Strapping)</option>
+                        <option value="9">GPIO 9 (Boot Button / Strapping)</option>
+                        <option value="10">GPIO 10 (Safe PWM)</option>
+                        <option value="20">GPIO 20 (UART RXD)</option>
+                        <option value="21">GPIO 21 (UART TXD)</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Save & Apply Button -->
+            <button onclick="applyHardwareConfig()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition">
+                Apply & Save Parameters
+            </button>
+
+        </div>
+    </div>
+
+    <!-- Bluetooth OTA Firmware Update Modal -->
+    <div id="otaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-obsidian-800 border border-slate-700 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-neon-cyan text-base"></i>
+                    <h2 class="text-sm font-bold text-white uppercase tracking-wider">OTA Firmware Update</h2>
+                </div>
+                <button onclick="toggleOtaModal(false)" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Status Banner -->
+            <div id="otaStatusBanner" class="text-[11px] font-mono p-2.5 rounded-xl bg-rose-950/60 border border-rose-900/80 text-rose-300 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <i id="otaStatusIcon" class="fa-solid fa-circle-exclamation text-neon-crimson"></i>
+                    <span id="otaStatusText">Bluetooth Disconnected</span>
+                </div>
+                <button id="demoBleBtn" onclick="toggleBleConnection(true)" class="btn-3d px-2 py-1 rounded-lg text-[10px] font-mono font-bold text-neon-cyan hover:text-white shrink-0">
+                    <i class="fa-solid fa-play mr-1"></i> Demo Mode
+                </button>
+            </div>
+
+            <!-- Firmware Source Selector Tabs -->
+            <div class="grid grid-cols-2 gap-1 bg-obsidian-900/80 p-1 rounded-xl border border-slate-700/60 font-mono text-xs">
+                <button id="otaSourceTabLocal" onclick="setOtaSourceTab('local')" class="py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-hard-drive"></i> Local File
+                </button>
+                <button id="otaSourceTabGithub" onclick="setOtaSourceTab('github')" class="py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5">
+                    <i class="fa-brands fa-github"></i> GitHub Cloud
+                </button>
+            </div>
+
+            <!-- Firmware Source: Local File Container -->
+            <div id="localFileContainer" class="space-y-1.5 font-mono text-xs">
+                <label class="block text-slate-400 font-semibold text-[11px] uppercase tracking-wider">Select Firmware Image (.bin):</label>
+                <div id="fileDropZone" onclick="document.getElementById('otaFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-neon-cyan/60 rounded-xl p-4 text-center cursor-pointer transition-colors bg-obsidian-900/50">
+                    <input type="file" id="otaFileInput" accept=".bin" class="hidden" onclick="this.value=null" onchange="handleOtaFileSelect(event)">
+                    <div class="space-y-1">
+                        <i class="fa-solid fa-file-code text-2xl text-slate-500" id="fileIcon"></i>
+                        <div id="fileNameDisplay" class="text-xs font-bold text-slate-300">Click or Drag & Drop .bin File</div>
+                        <div id="fileSizeDisplay" class="text-[10px] text-slate-400">Supported formats: ESP32 binary firmware (.bin)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Firmware Source: GitHub Cloud Container -->
+            <div id="githubCloudContainer" class="space-y-2 font-mono text-xs hidden">
+                <label class="block text-slate-400 font-semibold text-[11px] uppercase tracking-wider">GitHub Repository (Owner/Repo):</label>
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-brands fa-github absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" id="githubRepoInput" value="gozkeser/esp32-servo-tester" placeholder="owner/repository" class="w-full bg-obsidian-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white outline-none focus:border-neon-cyan font-mono">
+                    </div>
+                    <button onclick="checkGitHubRelease()" class="btn-3d px-3 py-1.5 rounded-xl text-xs font-bold text-neon-cyan hover:text-white shrink-0">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Check Update
+                    </button>
+                </div>
+
+                <!-- GitHub Release Result Card -->
+                <div id="githubReleaseCard" class="hidden bg-obsidian-900/90 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span id="ghTagBadge" class="px-2 py-0.5 rounded-full bg-cyan-950 text-neon-cyan border border-cyan-800 font-bold text-[10px]">v1.0.0</span>
+                            <span id="ghReleaseTitle" class="font-bold text-slate-200 truncate max-w-[180px]">Latest Release</span>
+                        </div>
+                        <span id="ghFileSize" class="text-[10px] text-slate-400">0 KB</span>
+                    </div>
+                    <div id="ghReleaseBody" class="text-[10px] text-slate-400 line-clamp-2 italic bg-obsidian-950 p-1.5 rounded border border-slate-800/80">
+                        No changelog provided.
+                    </div>
+                    <button id="ghDownloadBtn" onclick="downloadAndLoadGitHubFirmware()" class="w-full py-1.5 rounded-lg bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Download & Ready to Flash
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="space-y-2 font-mono">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400 uppercase text-[10px] tracking-wider font-semibold">UPDATE PROGRESS</span>
+                    <span id="otaPercentText" class="text-neon-cyan font-bold">0.0%</span>
+                </div>
+                <div class="w-full bg-obsidian-900 rounded-full h-3 p-0.5 border border-slate-700/80 overflow-hidden relative">
+                    <div id="otaProgressBar" class="bg-gradient-to-r from-cyan-500 to-neon-green h-full rounded-full transition-all duration-150 w-0 shadow-[0_0_10px_#00F3FF]"></div>
+                </div>
+            </div>
+
+            <!-- Telemetry Metrics Grid -->
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                    <div class="text-[9px] uppercase text-slate-400">Transferred</div>
+                    <div id="otaBytesText" class="text-xs font-bold text-white mt-0.5">0 KB / 0 KB</div>
+                </div>
+                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                    <div class="text-[9px] uppercase text-slate-400">Transfer Speed</div>
+                    <div id="otaSpeedText" class="text-xs font-bold text-neon-yellow mt-0.5">0.0 KB/s</div>
+                </div>
+                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                    <div class="text-[9px] uppercase text-slate-400">Elapsed Time</div>
+                    <div id="otaElapsedText" class="text-xs font-bold text-slate-300 mt-0.5">00:00</div>
+                </div>
+                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                    <div class="text-[9px] uppercase text-slate-400">Remaining Time</div>
+                    <div id="otaRemainingText" class="text-xs font-bold text-neon-cyan mt-0.5">00:00</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <button id="otaStartBtn" onclick="startOtaUpdate()" disabled class="py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 opacity-40 cursor-not-allowed transition">
+                    <i class="fa-solid fa-upload mr-1"></i> Start Update
+                </button>
+                <button id="otaStopBtn" onclick="stopOtaUpdate()" disabled class="py-2.5 rounded-xl bg-rose-950 border border-rose-800/80 text-neon-crimson font-bold uppercase tracking-wider text-xs opacity-40 cursor-not-allowed transition">
+                    <i class="fa-solid fa-hand mr-1"></i> Abort / Stop
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. BLE PROTOCOL UUID CONSTANTS & PARAMETERS
+           ========================================================================== */
+        // Nordic UART Service (servo control + telemetry)
+        const NUS_SERVICE_UUID        = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const RX_CHARACTERISTIC_UUID  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+        const TX_CHARACTERISTIC_UUID  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+        // BLEOTA Service (Espressif / gb88/BLEOTA standard UUIDs)
+        const BLEOTA_SERVICE_UUID     = '00008018-0000-1000-8000-00805f9b34fb';
+        const BLEOTA_RECV_FW_UUID     = '00008020-0000-1000-8000-00805f9b34fb';
+        const BLEOTA_CMD_UUID         = '00008022-0000-1000-8000-00805f9b34fb';
+
+        // PWM Default Parameters (In Microseconds µs) — will be overwritten by config_sync from ESP32
+        let minPulse = 500;            // Default 0° boundary
+        let centerPulse = 1500;        // Default 90° center/neutral position
+        let maxPulse = 2500;           // Default 180° boundary
+        let pwmFrequency = 50;         // Default PWM Refresh Rate in Hz
+        let pwmGpioPin = 0;            // Default PWM Output GPIO Pin
+        let liveRssi = -99;            // RSSI Signal Strength
+
+        // Master Control States
+        let activeMode = 'manual';     // Active mode: 'manual', 'sweep', 'step'
+        let currentPulse = 1500;       // Current signal pulse duration (µs)
+        let isPwmEnabled = false;      // PWM starts OFF by default on load for safety
+
+        // BLE GATT Connection Handles
+        let bleDevice = null;
+        let rxCharacteristic = null;   // NUS RX (ESP32 receives commands)
+        let txCharacteristic = null;   // NUS TX (ESP32 sends telemetry)
+        let bleotaCmdChar  = null;     // BLEOTA command characteristic (0x8022)
+        let bleotaRecvChar = null;     // BLEOTA receive firmware characteristic (0x8020)
+        let isBleConnected = false;
+        let isSimulatedBle = false;
+
+        // Command Transmission Throttling
+        let lastPulseSendTime = 0;
+
+        // Auto Sweep Test State
+        let isSweeping = false;        // Sweep active flag
+        let sweepSpeed = 1000;         // Sweep rate in µs per second
+        let sweepDwell = 250;          // Endpoint pause dwell time in ms
+        let sweepPhase = 0;            // 0: CENTER->MAX, 1: Dwell MAX, 2: MAX->MIN, 3: Dwell MIN, 4: MIN->CENTER
+        let completedCycles = 0;       // Endurance cycle counter
+        let lastSweepTimestamp = 0;    // Delta timing tracker
+        let sweepDwellTimer = 0;       // Dwell timer tracker
+
+        // 3D Rotary Knob Interaction Physics
+        let isDraggingKnob = false;
+        let knobCenterX = 0;
+        let knobCenterY = 0;
+        let lastTouchAngle = 0;
+        let accumulatedPulse = 1500;
+        let dragDistance = 0;
+        let touchStartPos = { x: 0, y: 0 };
+
+        // UI Update Throttling (max 20 FPS DOM updates)
+        let lastUiUpdateTime = 0;
+        const UI_UPDATE_MIN_INTERVAL_MS = 50;
+
+        // Canvas dirty-flag (avoid redraw when nothing changed)
+        let canvasLastPulse = -1;
+        let canvasLastPwmEnabled = null;
+
+        /* ==========================================================================
+           2. CANVAS & SYSTEM INITIALIZATION
+           ========================================================================== */
+        const canvas = document.getElementById('waveformCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let _initDone = false;
+        const initSystemUI = () => {
+            if (_initDone) return;  // Guard: prevent double-init from DOMContentLoaded + load
+            _initDone = true;
+            initDefaultConfig();
+            resizeCanvas();
+            initKnobEvents();
+            updateUI();
+            requestAnimationFrame(animationLoop);
+        };
+
+        // Single init point — DOMContentLoaded is always fired before load
+        document.addEventListener('DOMContentLoaded', initSystemUI);
+
+        window.addEventListener('resize', resizeCanvas);
+
+        /* ==========================================================================
+           3. DEFAULT CONFIG & ESP32 CONFIG SYNC
+           ========================================================================== */
+        function initDefaultConfig() {
+            // Set form placeholders to firmware defaults.
+            // Actual values will be overwritten by config_sync packet from ESP32 on connect.
+            document.getElementById('cfgMinPulse').value    = minPulse;
+            document.getElementById('cfgCenterPulse').value = centerPulse;
+            document.getElementById('cfgMaxPulse').value    = maxPulse;
+            document.getElementById('cfgFrequency').value   = pwmFrequency;
+            document.getElementById('cfgGpioPin').value     = pwmGpioPin;
+            currentPulse = centerPulse;
+            accumulatedPulse = currentPulse;
+        }
+
+        /**
+         * Applies configuration received from ESP32 config_sync packet.
+         * Called once after BLE connection + CCCD subscription.
+         */
+        function applyConfigFromDevice(data) {
+            if (data.min_us    !== undefined) { minPulse = data.min_us;       document.getElementById('cfgMinPulse').value    = minPulse; }
+            if (data.center_us !== undefined) { centerPulse = data.center_us; document.getElementById('cfgCenterPulse').value = centerPulse; }
+            if (data.max_us    !== undefined) { maxPulse = data.max_us;       document.getElementById('cfgMaxPulse').value    = maxPulse; }
+            if (data.freq      !== undefined) { pwmFrequency = data.freq;     document.getElementById('cfgFrequency').value   = pwmFrequency; }
+            if (data.pin       !== undefined) { pwmGpioPin = data.pin;        document.getElementById('cfgGpioPin').value     = String(pwmGpioPin); }
+            if (data.pwm_en    !== undefined) isPwmEnabled = data.pwm_en;
+            if (data.high_us   !== undefined && !isDraggingKnob) {
+                currentPulse = data.high_us;
+                accumulatedPulse = currentPulse;
+            }
+            scheduleUIUpdate();
+            console.log('[config_sync] Applied device config:', data);
+        }
+
+        function loadSavedConfig() {
+            // Legacy stub — kept for backwards compat. Real config comes from ESP32 config_sync.
+            const saved = localStorage.getItem('esp32_servo_tester_config');
+            if (saved) {
+                try {
+                    const cfg = JSON.parse(saved);
+                    // Only restore if ESP32 hasn't sent config_sync yet
+                    if (!isBleConnected) {
+                        minPulse     = parseInt(cfg.minPulse)     || 500;
+                        centerPulse  = parseInt(cfg.centerPulse)  || 1500;
+                        maxPulse     = parseInt(cfg.maxPulse)     || 2500;
+                        pwmFrequency = parseInt(cfg.pwmFrequency) || 50;
+                        pwmGpioPin   = cfg.pwmGpioPin !== undefined && !isNaN(parseInt(cfg.pwmGpioPin)) ? parseInt(cfg.pwmGpioPin) : 0;
+                        document.getElementById('cfgMinPulse').value    = minPulse;
+                        document.getElementById('cfgCenterPulse').value = centerPulse;
+                        document.getElementById('cfgMaxPulse').value    = maxPulse;
+                        document.getElementById('cfgFrequency').value   = pwmFrequency;
+                        document.getElementById('cfgGpioPin').value     = pwmGpioPin;
+                    }
+                } catch(e) {
+                    console.error("Error parsing saved hardware parameters:", e);
+                }
+            }
+            currentPulse = centerPulse;
+            accumulatedPulse = currentPulse;
+        }
+
+        function applyHardwareConfig() {
+            const newMin    = parseInt(document.getElementById('cfgMinPulse').value)    || 500;
+            const newCenter = parseInt(document.getElementById('cfgCenterPulse').value) || 1500;
+            const newMax    = parseInt(document.getElementById('cfgMaxPulse').value)    || 2500;
+            const newFreq   = parseInt(document.getElementById('cfgFrequency').value)   || 50;
+            const newPin    = parseInt(document.getElementById('cfgGpioPin').value);
+
+            if (newMin >= newCenter || newCenter >= newMax) {
+                alert("Invalid PWM boundaries! Ensure MIN < CENTER < MAX.");
+                return;
+            }
+
+            // Only send commands for changed values (ESP32 saves to NVS on receipt)
+            if (minPulse !== newMin || maxPulse !== newMax) {
+                minPulse = newMin;
+                maxPulse = newMax;
+                sendCommand({ cmd: "set_pwm_range", min: minPulse, max: maxPulse });
+            }
+            if (centerPulse !== newCenter) {
+                centerPulse = newCenter;
+                sendCommand({ cmd: "set_pwm_center", val: centerPulse });
+            }
+            if (pwmFrequency !== newFreq) {
+                pwmFrequency = newFreq;
+                sendCommand({ cmd: "set_pwm_freq", val: pwmFrequency });
+            }
+            if (!isNaN(newPin) && pwmGpioPin !== newPin) {
+                pwmGpioPin = newPin;
+                sendCommand({ cmd: "set_pwm_pin", val: pwmGpioPin });
+            }
+
+            // NOTE: No localStorage.setItem — ESP32 NVS is the source of truth.
+            // Values persist across ESP32 reboots and will be sent via config_sync on reconnect.
+
+            setPulseWidth(currentPulse, true);
+            scheduleUIUpdate();
+            toggleConfigModal(false);
+        }
+
+        /* ==========================================================================
+           4. BLE COMMUNICATION & PROTOCOL HANDLERS
+           ========================================================================== */
+        async function toggleBleConnection(forceSimulate = false) {
+            if (isBleConnected || isSimulatedBle) {
+                disconnectBle();
+                return;
+            }
+
+            if (forceSimulate) {
+                isSimulatedBle = true;
+                isBleConnected = false;
+                updateBleUIState(true, false, "ESP32-C3 (Simulated)");
+                return;
+            }
+
+            if (!navigator.bluetooth) {
+                alert("Web Bluetooth API is not supported in this browser. Please use Google Chrome, Microsoft Edge, or Bluefy.");
+                return;
+            }
+
+            try {
+                updateBleUIState(false, true);
+
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'ESP32-ServoLab' },
+                        { namePrefix: 'ESP32' }
+                    ],
+                    optionalServices: [NUS_SERVICE_UUID, BLEOTA_SERVICE_UUID]
+                });
+
+                const devName = bleDevice ? bleDevice.name : "ESP32-ServoLab";
+                console.log(`Connecting to GATT Server (${devName})...`);
+
+                // Direct connect without retries to prevent OS deadlocks on Windows 11
+                const server = await bleDevice.gatt.connect();
+
+                // 1000ms stabilization delay for Windows Web Bluetooth MTU/param negotiation
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // --- NUS Service (servo control + telemetry) ---
+                console.log("Locating Nordic UART Service...");
+                const nusService = await server.getPrimaryService(NUS_SERVICE_UUID);
+                rxCharacteristic = await nusService.getCharacteristic(RX_CHARACTERISTIC_UUID);
+                txCharacteristic = await nusService.getCharacteristic(TX_CHARACTERISTIC_UUID);
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
+
+                // --- BLEOTA Service (OTA firmware updates) ---
+                try {
+                    console.log("Locating BLEOTA Service...");
+                    const bleotaService = await server.getPrimaryService(BLEOTA_SERVICE_UUID);
+                    bleotaCmdChar  = await bleotaService.getCharacteristic(BLEOTA_CMD_UUID);
+                    bleotaRecvChar = await bleotaService.getCharacteristic(BLEOTA_RECV_FW_UUID);
+
+                    // Subscribe to indications/notifications for BLEOTA command & firmware ACKs
+                    try {
+                        await bleotaCmdChar.startNotifications();
+                        bleotaCmdChar.addEventListener('characteristicvaluechanged', handleBleOtaCmdNotification);
+                    } catch (e) { console.warn("bleotaCmdChar notify subscribe error:", e); }
+
+                    try {
+                        await bleotaRecvChar.startNotifications();
+                        bleotaRecvChar.addEventListener('characteristicvaluechanged', handleBleOtaRecvNotification);
+                    } catch (e) { console.warn("bleotaRecvChar notify subscribe error:", e); }
+
+                    console.log("BLEOTA Service connected & ready.");
+                } catch (bleotaErr) {
+                    console.warn("BLEOTA Service not found (OTA fallback to NUS):", bleotaErr.message);
+                    bleotaCmdChar  = null;
+                    bleotaRecvChar = null;
+                }
+
+                if (!bleDevice.gatt.connected) {
+                    throw new Error("GATT connection failed. If issue persists, please UNPAIR the ESP32 from Windows Bluetooth Settings and try again.");
+                }
+
+                // Register disconnect listener only after successful complete handshake
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                isBleConnected = true;
+                isSimulatedBle = false;
+                const connectedName = bleDevice ? bleDevice.name : "ESP32-ServoLab";
+                updateBleUIState(true, false, connectedName);
+
+                // config_sync will be sent automatically by ESP32 after CCCD subscription
+                // No need to request get_status manually
+                startBleHeartbeat();
+
+            } catch (err) {
+                console.error("BLE Connection failed:", err);
+                isBleConnected = false;
+                isSimulatedBle = false;
+                updateBleUIState(false);
+
+                // ERROR DIAGNOSTICS: Print exact error in status text
+                const statusText = document.getElementById('otaStatusText');
+                if (statusText) statusText.innerText = "Error: " + err.message;
+
+                // Cleanup: Disconnect if GATT is connected in half-open state
+                if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+                    bleDevice.gatt.disconnect();
+                }
+
+                if (err.name !== 'NotFoundError' && confirm(`Bluetooth connection failed: ${err.message}. Would you like to launch Demo Simulation Mode?`)) {
+                    toggleBleConnection(true);
+                }
+            }
+        }
+
+        function disconnectBle() {
+            if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+            onDisconnected();
+            bleDevice = null; // Only null out on explicit user-initiated disconnect
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+        });
+
+        function onDisconnected() {
+            isBleConnected = false;
+            isSimulatedBle = false;
+            rxCharacteristic  = null;
+            txCharacteristic  = null;
+            bleotaCmdChar     = null;
+            bleotaRecvChar    = null;
+            liveRssi = -99;
+
+            if (isPwmEnabled) {
+                isPwmEnabled = false;
+                if (isSweeping) toggleAutoSweep(false);
+            }
+
+            updateBleUIState(false);
+            scheduleUIUpdate();
+            stopBleHeartbeat();
+        }
+
+        let bleHeartbeatInterval = null;
+        function startBleHeartbeat() {
+            stopBleHeartbeat();
+            // 5s heartbeat interval — ESP32 watchdog triggers at 30s inactivity
+            bleHeartbeatInterval = setInterval(() => {
+                if (isBleConnected && rxCharacteristic && !isOtaRunning) {
+                    sendCommand({ cmd: "ping" });
+                }
+            }, 5000);
+        }
+        function stopBleHeartbeat() {
+            if (bleHeartbeatInterval) {
+                clearInterval(bleHeartbeatInterval);
+                bleHeartbeatInterval = null;
+            }
+        }
+
+        function handleNotifications(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            try {
+                const data = JSON.parse(value);
+                updateUIStateFromTelemetry(data);
+            } catch (e) {
+                // Non-JSON packet (binary OTA data, etc.)
+            }
+        }
+
+        function updateUIStateFromTelemetry(data) {
+            // config_sync: ESP32-backed settings on first connection
+            if (data.type === 'config_sync') {
+                applyConfigFromDevice(data);
+                return;
+            }
+            // OTA status notifications (handled by BLEOTA library on ESP32 side)
+            if (data.type === 'ota_ready') {
+                if (otaReadyResolver) { otaReadyResolver(data); otaReadyResolver = null; }
+                return;
+            }
+            if (data.type === 'ota_ack') {
+                otaFlashBytesWritten = data.written;
+                updateOtaProgressUI();
+                return;
+            }
+            if (data.type === 'ota_status') {
+                if (otaCompletionResolver) { otaCompletionResolver(data); otaCompletionResolver = null; }
+                return;
+            }
+            // Regular 1Hz telemetry status update
+            if (data.pwm_en  !== undefined) isPwmEnabled = data.pwm_en;
+            if (data.high_us !== undefined && !isDraggingKnob) {
+                currentPulse = data.high_us;
+                accumulatedPulse = currentPulse;
+            }
+            if (data.rssi    !== undefined) liveRssi = data.rssi;
+            // freq/min/max/center/pin updates (in case they change at runtime)
+            if (data.freq      !== undefined) pwmFrequency = data.freq;
+            if (data.min_us    !== undefined) minPulse = data.min_us;
+            if (data.center_us !== undefined) centerPulse = data.center_us;
+            if (data.max_us    !== undefined) maxPulse = data.max_us;
+            if (data.pin       !== undefined) pwmGpioPin = data.pin;
+
+            scheduleUIUpdate();
+        }
+
+        let isBleWriting = false;
+        const commandQueue = [];
+
+        async function sendCommand(cmdObj) {
+            if (!isBleConnected || !rxCharacteristic || !cmdObj) return;
+
+            // Block non-OTA commands during active OTA update to keep BLE channel clean and prevent command collisions
+            if (isOtaRunning && cmdObj.cmd && !cmdObj.cmd.startsWith('ota_')) {
+                return;
+            }
+
+            commandQueue.push(cmdObj);
+            if (isBleWriting) return;
+
+            isBleWriting = true;
+            const encoder = new TextEncoder();
+
+            while (commandQueue.length > 0) {
+                const nextCmd = commandQueue.shift();
+                const jsonStr = JSON.stringify(nextCmd);
+
+                try {
+                    const payload = encoder.encode(jsonStr);
+                    await rxCharacteristic.writeValue(payload);
+                } catch (err) {
+                    console.error("BLE Command Send Error:", err);
+                }
+            }
+
+            isBleWriting = false;
+        }
+
+        /* ==========================================================================
+           5. ROTARY KNOB TOUCH & MOUSE EVENT HANDLING
+           ========================================================================== */
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        function initKnobEvents() {
+            const knobOuter = document.getElementById('knobOuter');
+
+            const handleStart = (e) => {
+                if (activeMode !== 'manual') return;
+                
+                if (e.touches && e.cancelable) {
+                    e.preventDefault();
+                }
+
+                isDraggingKnob = true;
+                dragDistance = 0;
+
+                const rect = knobOuter.getBoundingClientRect();
+                knobCenterX = rect.left + rect.width / 2;
+                knobCenterY = rect.top + rect.height / 2;
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                touchStartPos = { x: clientX, y: clientY };
+
+                const dx = clientX - knobCenterX;
+                const dy = clientY - knobCenterY;
+
+                lastTouchAngle = Math.atan2(dy, dx);
+                accumulatedPulse = currentPulse;
+            };
+
+            const handleMove = (e) => {
+                if (!isDraggingKnob || activeMode !== 'manual') return;
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const moveDist = Math.hypot(clientX - touchStartPos.x, clientY - touchStartPos.y);
+                dragDistance += moveDist;
+
+                // GUARD: If PWM is OFF, do NOT rotate the knob or change signal values when dragging!
+                if (!isPwmEnabled) return;
+
+                if (e.touches && e.cancelable) {
+                    e.preventDefault();
+                }
+
+                const dx = clientX - knobCenterX;
+                const dy = clientY - knobCenterY;
+
+                // Deadzone filter around center pivot
+                const dist = Math.hypot(dx, dy);
+                if (dist < 15) return;
+
+                const currentAngle = Math.atan2(dy, dx);
+                let deltaAngle = currentAngle - lastTouchAngle;
+
+                // Wrap normalization
+                while (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
+                while (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+
+                lastTouchAngle = currentAngle;
+
+                const deltaDeg = deltaAngle * (180 / Math.PI);
+                const usPerDeg = (maxPulse - minPulse) / 270;
+                
+                accumulatedPulse += (deltaDeg * usPerDeg);
+                setPulseWidth(Math.round(accumulatedPulse));
+            };
+
+            const handleEnd = (e) => {
+                if (isDraggingKnob && dragDistance < 8) {
+                    // Tap on knob center toggles PWM ON/OFF state
+                    togglePwmState();
+                }
+                isDraggingKnob = false;
+            };
+
+            knobOuter.addEventListener('mousedown', handleStart);
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleEnd);
+
+            knobOuter.addEventListener('touchstart', handleStart, { passive: false });
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('touchend', handleEnd);
+            window.addEventListener('touchcancel', handleEnd);
+        }
+
+        /* ==========================================================================
+           6. UI TELEMETRY & CONTROL STATE UPDATES
+           ========================================================================== */
+        function togglePwmState(forceState) {
+            let nextState = forceState !== undefined ? forceState : !isPwmEnabled;
+
+            if (nextState && !isBleConnected && !isSimulatedBle) {
+                alert("Bluetooth Disconnected!\n\nPlease connect to your ESP32-C3 device or launch Demo Simulation Mode to output PWM.");
+                isPwmEnabled = false;
+                scheduleUIUpdate();
+                return;
+            }
+
+            isPwmEnabled = nextState;
+            if (!isPwmEnabled && isSweeping) {
+                toggleAutoSweep(false);
+            }
+
+            sendCommand({ cmd: "set_pwm_enable", val: isPwmEnabled });
+            scheduleUIUpdate();
+        }
+
+        /* ==========================================================================
+           UI UPDATE SCHEDULER (DOM throttle + canvas dirty-flag)
+           ========================================================================== */
+        function scheduleUIUpdate() {
+            const now = performance.now();
+            if (now - lastUiUpdateTime < UI_UPDATE_MIN_INTERVAL_MS) return;
+            lastUiUpdateTime = now;
+            updateUI();
+        }
+
+        function setPulseWidth(val, forceSend = false) {
+            currentPulse = Math.min(Math.max(val, minPulse), maxPulse);
+            accumulatedPulse = currentPulse;
+            scheduleUIUpdate();
+
+            const now = performance.now();
+            if (forceSend || (now - lastPulseSendTime > 30)) {
+                lastPulseSendTime = now;
+                sendCommand({ cmd: "set_pwm_hightime", val: currentPulse });
+            }
+        }
+
+        function adjustPulse(delta) {
+            if (!isPwmEnabled) return; // Guard clause
+            setPulseWidth(currentPulse + delta, true);
+        }
+
+        function setAnglePreset(degrees) {
+            if (!isPwmEnabled) return; // Guard clause
+            let ratio = degrees / 180.0;
+            let target = Math.round(minPulse + ratio * (maxPulse - minPulse));
+            setPulseWidth(target, true);
+        }
+
+        function calculateAngle() {
+            let range = maxPulse - minPulse;
+            let offset = currentPulse - minPulse;
+            return ((offset / range) * 180.0).toFixed(2);
+        }
+
+        function updateUI() {
+            const periodMs = (1000 / pwmFrequency).toFixed(2);
+            const highTimeMs = (currentPulse / 1000).toFixed(2);
+            const lowTimeMs = (periodMs - highTimeMs).toFixed(2);
+            const dutyPercent = ((currentPulse / (1000000 / pwmFrequency)) * 100).toFixed(2);
+
+            // Telemetry Elements
+            const pulseElem = document.getElementById('telemetryPulse');
+            const pulseUnitElem = document.getElementById('telemetryPulseUnit');
+            const pulseDot = document.getElementById('oscilloscopePulseDot');
+
+            if (isPwmEnabled) {
+                pulseElem.innerText = currentPulse;
+                pulseElem.className = 'text-lg font-bold font-mono text-neon-cyan glow-cyan';
+                if (pulseUnitElem) pulseUnitElem.classList.remove('hidden');
+                if (pulseDot) pulseDot.className = 'w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse';
+            } else {
+                pulseElem.innerText = 'OFF';
+                pulseElem.className = 'text-lg font-bold font-mono text-neon-crimson glow-crimson';
+                if (pulseUnitElem) pulseUnitElem.classList.add('hidden');
+                if (pulseDot) pulseDot.className = 'w-1.5 h-1.5 rounded-full bg-neon-crimson';
+            }
+
+            document.getElementById('telemetryDuty').innerText = isPwmEnabled ? dutyPercent : '0.0';
+            document.getElementById('telemetryFreq').innerText = `${pwmFrequency} Hz (${periodMs}ms)`;
+            document.getElementById('telemetryRssi').innerText = (isBleConnected && liveRssi !== -99) ? `${liveRssi}` : '---';
+            document.getElementById('telemetryPinSub').innerText = `GPIO ${pwmGpioPin} Output`;
+
+            // Rotary Knob Dial Marker Needle Rotation
+            let angleRatio = (currentPulse - minPulse) / (maxPulse - minPulse);
+            let knobRotationDeg = -135 + (angleRatio * 270);
+            document.getElementById('knobFace').style.transform = `rotate(${knobRotationDeg}deg)`;
+
+            const knobPulseElem = document.getElementById('knobPulseText');
+            const knobNeedle = document.getElementById('knobNeedle');
+            const knobStatusBadge = document.getElementById('knobStatusBadge');
+
+            if (isPwmEnabled) {
+                knobPulseElem.innerText = `${currentPulse} µs`;
+                knobPulseElem.className = 'text-lg font-black font-mono text-neon-cyan glow-cyan transition-colors duration-200';
+                if (knobNeedle) {
+                    knobNeedle.className = 'absolute top-1.5 w-1.5 h-5 bg-neon-cyan rounded-full shadow-[0_0_8px_#00F3FF] transition-colors duration-200';
+                }
+                if (knobStatusBadge) {
+                    knobStatusBadge.innerText = 'PWM ON';
+                    knobStatusBadge.className = 'text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-cyan-950 text-neon-cyan border border-cyan-800/50 mt-0.5';
+                }
+            } else {
+                knobPulseElem.innerText = `PWM OFF`;
+                knobPulseElem.className = 'text-[13px] font-bold font-mono text-neon-crimson glow-crimson transition-colors duration-200';
+                if (knobNeedle) {
+                    knobNeedle.className = 'absolute top-1.5 w-1.5 h-5 bg-slate-600 rounded-full transition-colors duration-200';
+                }
+                if (knobStatusBadge) {
+                    knobStatusBadge.innerText = 'PWM OFF';
+                    knobStatusBadge.className = 'text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-950 text-neon-crimson border border-rose-800/50 mt-0.5';
+                }
+            }
+
+            // Update PWM Badges on Test Panels
+            const updateBadge = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (isPwmEnabled) {
+                    el.innerText = "PWM LIVE";
+                    el.className = "text-[8px] font-mono px-1 py-0.2 rounded bg-cyan-950 text-neon-cyan border border-cyan-800/50";
+                } else {
+                    el.innerText = "PWM OFF";
+                    el.className = "text-[8px] font-mono px-1 py-0.2 rounded bg-rose-950 text-neon-crimson border border-rose-800/50";
+                }
+            };
+            updateBadge('sweepPwmWarning');
+            updateBadge('stepPwmWarning');
+
+            // Handle Control Disabling Across All Modes when PWM is OFF
+            const manualBtns = document.querySelectorAll('.manual-btn, .preset-btn');
+            const sweepBtn = document.getElementById('sweepToggleBtn');
+            const stepBtns = document.querySelectorAll('.step-btn');
+
+            const toggleGroup = (elements, disable) => {
+                elements.forEach(btn => {
+                    btn.disabled = disable;
+                    if (disable) {
+                        btn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                    } else {
+                        btn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                    }
+                });
+            };
+
+            // Disable/Enable Manual Micro Stepping and Presets
+            toggleGroup(manualBtns, !isPwmEnabled);
+
+            // Disable/Enable Sweep Button
+            if (sweepBtn) {
+                sweepBtn.disabled = !isPwmEnabled;
+                if (!isPwmEnabled) {
+                    sweepBtn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                } else {
+                    sweepBtn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                }
+            }
+
+            // Disable/Enable Step Jump Buttons
+            toggleGroup(stepBtns, !isPwmEnabled);
+
+            // Waveform Oscilloscope Labels
+            document.getElementById('periodText').innerText = `T = ${periodMs} ms`;
+            document.getElementById('tHighText').innerText = isPwmEnabled ? `${highTimeMs} ms` : '0.00 ms';
+            document.getElementById('tLowText').innerText = isPwmEnabled ? `${lowTimeMs} ms` : `${periodMs} ms`;
+            document.getElementById('boundsText').innerText = `${minPulse} - ${maxPulse} µs`;
+        }
+
+        function updateBleUIState(connected, scanning = false, name = "ESP32-ServoLab") {
+            const headerDot = document.getElementById('headerBleDot');
+            const headerIcon = document.getElementById('headerBleIcon');
+            const statusBanner = document.getElementById('otaStatusBanner');
+            const statusIcon = document.getElementById('otaStatusIcon');
+            const statusText = document.getElementById('otaStatusText');
+            const demoBtn = document.getElementById('demoBleBtn');
+
+            if (scanning) {
+                if (headerDot) headerDot.className = "w-1.5 h-1.5 rounded-full bg-neon-yellow animate-ping ml-1";
+                if (headerIcon) headerIcon.className = "fa-brands fa-bluetooth-b text-xs text-neon-yellow animate-pulse";
+                if (statusBanner && !isOtaRunning) {
+                    statusBanner.className = "text-[11px] font-mono p-2.5 rounded-xl bg-amber-950/80 border border-amber-800 text-neon-yellow flex items-center justify-between gap-2 animate-pulse";
+                    if (statusIcon) statusIcon.className = "fa-solid fa-spinner animate-spin text-neon-yellow";
+                    if (statusText) statusText.innerText = "Scanning & connecting to ESP32...";
+                    if (demoBtn) demoBtn.classList.add('hidden');
+                }
+                return;
+            }
+
+            if (connected) {
+                if (headerDot) headerDot.className = "w-1.5 h-1.5 rounded-full bg-neon-green ml-1";
+                if (headerIcon) headerIcon.className = "fa-brands fa-bluetooth-b text-xs text-neon-green glow-green";
+                if (statusBanner && !isOtaRunning) {
+                    statusBanner.className = "text-[11px] font-mono p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800 text-neon-green flex items-center justify-between gap-2";
+                    if (statusIcon) statusIcon.className = "fa-solid fa-circle-check text-neon-green";
+                    if (statusText) statusText.innerText = otaFile ? "Connected & Ready to flash firmware" : `Connected (${name})`;
+                    if (demoBtn) demoBtn.classList.add('hidden');
+                }
+            } else {
+                if (headerDot) headerDot.className = "w-1.5 h-1.5 rounded-full bg-slate-500 ml-1";
+                if (headerIcon) headerIcon.className = "fa-brands fa-bluetooth-b text-xs text-slate-400";
+                if (statusBanner && !isOtaRunning) {
+                    statusBanner.className = "text-[11px] font-mono p-2.5 rounded-xl bg-rose-950/60 border border-rose-900/80 text-rose-300 flex items-center justify-between gap-2";
+                    if (statusIcon) statusIcon.className = "fa-solid fa-circle-exclamation text-neon-crimson";
+                    if (statusText) statusText.innerText = "Bluetooth Disconnected";
+                    if (demoBtn) demoBtn.classList.remove('hidden');
+                }
+            }
+
+            updateOtaStartButtonState();
+        }
+
+        /* ==========================================================================
+           7. TEST MODE SWITCHING & AUTOMATION HANDLERS
+           ========================================================================== */
+        function setTestMode(mode) {
+            activeMode = mode;
+            if (isSweeping && mode !== 'sweep') {
+                toggleAutoSweep(false);
+            }
+
+            const modes = ['manual', 'sweep', 'step'];
+            modes.forEach(m => {
+                document.getElementById(`tab-${m}`).classList.remove('tab-active');
+                document.getElementById(`mode-${m}-container`).classList.add('hidden');
+            });
+
+            document.getElementById(`tab-${mode}`).classList.add('tab-active');
+            document.getElementById(`mode-${mode}-container`).classList.remove('hidden');
+        }
+
+        function toggleAutoSweep(forceState) {
+            if (!isPwmEnabled && forceState !== false) return; // Guard clause when PWM is OFF
+
+            isSweeping = forceState !== undefined ? forceState : !isSweeping;
+            const btnText = document.getElementById('sweepBtnText');
+            const icon = document.getElementById('sweepIcon');
+            const btn = document.getElementById('sweepToggleBtn');
+
+            if (isSweeping) {
+                sweepPhase = 0;
+                setPulseWidth(centerPulse, true);
+                sweepDwellTimer = sweepDwell; // Initial dwell at center before launching!
+                btnText.innerText = "Pause Sweep";
+                icon.className = "fa-solid fa-pause";
+                btn.classList.replace('bg-neon-cyan', 'bg-neon-crimson');
+                btn.classList.replace('text-slate-950', 'text-white');
+                lastSweepTimestamp = performance.now();
+            } else {
+                btnText.innerText = "Start Sweep";
+                icon.className = "fa-solid fa-play";
+                btn.classList.replace('bg-neon-crimson', 'bg-neon-cyan');
+                btn.classList.replace('text-white', 'text-slate-950');
+                setPulseWidth(centerPulse, true);
+            }
+        }
+
+        function updateSweepSpeed(val) {
+            sweepSpeed = parseInt(val);
+            document.getElementById('sweepSpeedVal').innerText = `${sweepSpeed} µs/s`;
+        }
+
+        function updateSweepDwell(val) {
+            sweepDwell = parseInt(val);
+            document.getElementById('sweepDwellVal').innerText = `${sweepDwell} ms`;
+        }
+
+        function resetCycleCounter() {
+            completedCycles = 0;
+            document.getElementById('cycleCounter').innerText = "00000";
+        }
+
+        function triggerStepJump(targetPulseVal) {
+            if (!isPwmEnabled) return; // Guard clause
+            let startPulse = currentPulse;
+            setPulseWidth(targetPulseVal, true);
+            let deltaPulse = Math.abs(targetPulseVal - startPulse);
+            
+            document.getElementById('stepDeltaVal').innerText = `${deltaPulse} µs`;
+            let estTransit = ((((deltaPulse / (maxPulse - minPulse)) * 180) / 60) * 0.12).toFixed(2);
+            document.getElementById('transitTimeVal').innerText = `${estTransit} sec`;
+        }
+
+        function toggleConfigModal(show) {
+            const modal = document.getElementById('configModal');
+            if (show) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            } else {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+        }
+
+        /* ==========================================================================
+           8. BLUETOOTH OTA FIRMWARE UPDATE CONTROLLER (BLEOTA PROTOCOL)
+           ========================================================================== */
+        let otaFile = null;
+        let isOtaRunning = false;
+        let otaBytesTransferred = 0;
+        let otaFlashBytesWritten = 0;
+        let otaTotalBytes = 0;
+        let otaStartTime = 0;
+        let otaIntervalId = null;
+        let otaReadyResolver = null;
+        let otaCompletionResolver = null;
+
+        let bleOtaCmdAckResolver  = null;
+        let bleOtaRecvAckResolver = null;
+
+        /**
+         * Calculates CCITT CRC16 (XModem style) required by gb88/BLEOTA library.
+         */
+        function calculateBleOtaCrc16(data, len) {
+            let crc = 0;
+            for (let i = 0; i < len; i++) {
+                crc ^= (data[i] << 8);
+                for (let j = 0; j < 8; j++) {
+                    if (crc & 0x8000) {
+                        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+                    } else {
+                        crc <<= 1;
+                    }
+                }
+            }
+            return crc & 0xFFFF;
+        }
+
+        function handleBleOtaCmdNotification(event) {
+            const value = new Uint8Array(event.target.value.buffer);
+            // BLEOTA Command ACK layout (20 bytes):
+            // bytes[0..1]: 0x0003
+            // bytes[2..3]: command_id (0x0001 = START_OTA, 0x0002 = STOP_OTA)
+            // bytes[4..5]: status (0x0000 = ACK / OK)
+            if (value.length >= 6) {
+                const cmdId  = value[2] | (value[3] << 8);
+                const status = value[4] | (value[5] << 8);
+                console.log(`[BLEOTA Cmd Notification] Cmd: 0x${cmdId.toString(16)}, Status: ${status}`);
+                if (bleOtaCmdAckResolver) {
+                    bleOtaCmdAckResolver({ cmdId, status });
+                    bleOtaCmdAckResolver = null;
+                }
+            }
+        }
+
+        function handleBleOtaRecvNotification(event) {
+            const value = new Uint8Array(event.target.value.buffer);
+            // BLEOTA Recv FW ACK layout (20 bytes):
+            // bytes[0..1]: sector_index (uint16 LE)
+            // bytes[2..3]: status (0x0000 = ACK / OK)
+            if (value.length >= 4) {
+                const sectorIndex = value[0] | (value[1] << 8);
+                const status      = value[2] | (value[3] << 8);
+                if (bleOtaRecvAckResolver) {
+                    bleOtaRecvAckResolver({ sectorIndex, status });
+                    bleOtaRecvAckResolver = null;
+                }
+            }
+        }
+
+        function waitForBleOtaCmdAck(expectedCmdId, timeoutMs = 10000) {
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    bleOtaCmdAckResolver = null;
+                    reject(new Error(`Timeout waiting for BLEOTA Command ACK (Cmd: 0x${expectedCmdId.toString(16)})`));
+                }, timeoutMs);
+
+                bleOtaCmdAckResolver = (res) => {
+                    clearTimeout(timer);
+                    if (res.cmdId === expectedCmdId && res.status === 0) {
+                        resolve(res);
+                    } else {
+                        reject(new Error(`BLEOTA Cmd 0x${expectedCmdId.toString(16)} rejected with status ${res.status}`));
+                    }
+                };
+            });
+        }
+
+        function waitForBleOtaRecvAck(expectedSectorIndex, timeoutMs = 30000) {
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    bleOtaRecvAckResolver = null;
+                    reject(new Error(`Timeout waiting for BLEOTA Sector ${expectedSectorIndex} ACK`));
+                }, timeoutMs);
+
+                bleOtaRecvAckResolver = (res) => {
+                    clearTimeout(timer);
+                    if (res.sectorIndex === expectedSectorIndex && res.status === 0) {
+                        resolve(res);
+                    } else {
+                        reject(new Error(`BLEOTA Sector ${expectedSectorIndex} ACK error status ${res.status}`));
+                    }
+                };
+            });
+        }
+
+        function waitForOtaReadySignal(timeoutMs = 15000) {
+            return new Promise((resolve, reject) => {
+                if (isSimulatedBle) {
+                    resolve({ status: 'ok' });
+                    return;
+                }
+                const timer = setTimeout(() => {
+                    otaReadyResolver = null;
+                    reject(new Error("Timeout waiting for ESP32 flash erase (ota_ready)"));
+                }, timeoutMs);
+
+                otaReadyResolver = (resData) => {
+                    clearTimeout(timer);
+                    if (resData.status === 'ok') {
+                        resolve(resData);
+                    } else {
+                        reject(new Error(resData.msg || "ESP32 Flash erase failed"));
+                    }
+                };
+            });
+        }
+
+        function waitForOtaCompletionSignal(timeoutMs = 20000) {
+            return new Promise((resolve, reject) => {
+                if (isSimulatedBle) {
+                    resolve({ state: 'success' });
+                    return;
+                }
+
+                const onDisconnectDuringVerify = () => {
+                    // ESP32 rebooted after successful update
+                    clearTimeout(timer);
+                    console.log("[OTA Verification]: ESP32 rebooted (GATT disconnected cleanly).");
+                    resolve({ state: 'success', msg: 'ESP32 Rebooted' });
+                };
+
+                const timer = setTimeout(() => {
+                    otaCompletionResolver = null;
+                    if (bleDevice) bleDevice.removeEventListener('gattserverdisconnected', onDisconnectDuringVerify);
+                    reject(new Error("Timeout waiting for ESP32 firmware verification"));
+                }, timeoutMs);
+
+                if (bleDevice) {
+                    bleDevice.addEventListener('gattserverdisconnected', onDisconnectDuringVerify, { once: true });
+                }
+
+                otaCompletionResolver = (resData) => {
+                    clearTimeout(timer);
+                    if (bleDevice) bleDevice.removeEventListener('gattserverdisconnected', onDisconnectDuringVerify);
+                    if (resData.state === 'success') {
+                        resolve(resData);
+                    } else {
+                        reject(new Error(resData.msg || "ESP32 firmware verification failed"));
+                    }
+                };
+            });
+        }
+
+        async function writeChunkSafe(chunk) {
+            if (!isOtaRunning) return;
+            await rxCharacteristic.writeValue(chunk);
+        }
+
+        function toggleOtaModal(show) {
+            const modal = document.getElementById('otaModal');
+            if (show) {
+                if (!isOtaRunning) {
+                    resetOtaProgressUI();
+                }
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            } else {
+                if (isOtaRunning) {
+                    if (!confirm("An OTA update is currently in progress. Are you sure you want to close and cancel?")) {
+                        return;
+                    }
+                    stopOtaUpdate();
+                }
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+        }
+
+        let activeOtaSource = 'local';
+        let latestGitHubAsset = null;
+
+        function setOtaSourceTab(source) {
+            activeOtaSource = source;
+            const tabLocal = document.getElementById('otaSourceTabLocal');
+            const tabGithub = document.getElementById('otaSourceTabGithub');
+            const localContainer = document.getElementById('localFileContainer');
+            const githubContainer = document.getElementById('githubCloudContainer');
+
+            if (source === 'local') {
+                tabLocal.className = "py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5";
+                tabGithub.className = "py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                localContainer.classList.remove('hidden');
+                githubContainer.classList.add('hidden');
+            } else {
+                tabGithub.className = "py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5";
+                tabLocal.className = "py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                githubContainer.classList.remove('hidden');
+                localContainer.classList.add('hidden');
+            }
+        }
+
+        async function checkGitHubRelease() {
+            const repo = document.getElementById('githubRepoInput').value.trim();
+            if (!repo || !repo.includes('/')) {
+                alert("Please enter a valid GitHub repository format (owner/repo)");
+                return;
+            }
+
+            const card = document.getElementById('githubReleaseCard');
+            const statusText = document.getElementById('otaStatusText');
+
+            try {
+                if (statusText) statusText.innerText = "Checking GitHub Releases...";
+                const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
+                if (!res.ok) throw new Error("No releases found or repository not found.");
+
+                const data = await res.json();
+                const binAsset = data.assets && data.assets.find(a => a.name.toLowerCase().endsWith('.bin'));
+
+                if (!binAsset) {
+                    alert(`Release ${data.tag_name} found, but no binary firmware file (.bin) was attached to the GitHub release.`);
+                    return;
+                }
+
+                latestGitHubAsset = {
+                    version: data.tag_name,
+                    title: data.name || data.tag_name,
+                    size: binAsset.size,
+                    downloadUrl: binAsset.browser_download_url,
+                    filename: binAsset.name,
+                    body: data.body || "No changelog notes provided."
+                };
+
+                document.getElementById('ghTagBadge').innerText = latestGitHubAsset.version;
+                document.getElementById('ghReleaseTitle').innerText = latestGitHubAsset.title;
+                document.getElementById('ghFileSize').innerText = formatBytes(latestGitHubAsset.size);
+                document.getElementById('ghReleaseBody').innerText = latestGitHubAsset.body;
+
+                card.classList.remove('hidden');
+                if (statusText) statusText.innerText = `GitHub Release ${latestGitHubAsset.version} Found — Ready to Download`;
+            } catch (err) {
+                console.warn("GitHub Release check error:", err);
+                alert("GitHub Check Error: " + err.message);
+                if (statusText) statusText.innerText = "GitHub Release Check Failed";
+            }
+        }
+
+        async function downloadAndLoadGitHubFirmware() {
+            if (!latestGitHubAsset || !latestGitHubAsset.downloadUrl) return;
+
+            const btn = document.getElementById('ghDownloadBtn');
+            const statusText = document.getElementById('otaStatusText');
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Downloading Firmware...`;
+                if (statusText) statusText.innerText = "Downloading firmware from GitHub...";
+
+                const res = await fetch(latestGitHubAsset.downloadUrl);
+                if (!res.ok) throw new Error("Failed to download binary asset");
+
+                const blob = await res.blob();
+                otaFile = new File([blob], latestGitHubAsset.filename, { type: 'application/octet-stream' });
+                otaTotalBytes = otaFile.size;
+
+                document.getElementById('otaBytesText').innerText = `0 KB / ${formatBytes(otaTotalBytes)}`;
+                if (statusText) statusText.innerText = (isBleConnected || isSimulatedBle) ? "GitHub Firmware Downloaded & Ready to Flash!" : "Firmware downloaded — Connect BLE to start";
+
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-circle-check text-neon-green"></i> Loaded & Ready to Flash`;
+
+                updateOtaStartButtonState();
+            } catch (err) {
+                console.error("Download error:", err);
+                alert("Failed to download firmware binary from GitHub: " + err.message);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Download & Ready to Flash`;
+            }
+        }
+
+        function handleOtaFileSelect(e) {
+            const file = e.target.files ? e.target.files[0] : null;
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.bin')) {
+                alert("Please select a valid ESP32 firmware binary file (.bin)");
+                return;
+            }
+
+            otaFile = file;
+            otaTotalBytes = file.size;
+
+            document.getElementById('fileNameDisplay').innerText = file.name;
+            document.getElementById('fileNameDisplay').className = 'text-xs font-bold text-neon-cyan';
+            document.getElementById('fileSizeDisplay').innerText = `Size: ${formatBytes(file.size)}`;
+            document.getElementById('fileIcon').className = 'fa-solid fa-file-shield text-2xl text-neon-cyan';
+
+            resetOtaProgressUI();
+            updateOtaStartButtonState();
+        }
+
+        function updateOtaStartButtonState() {
+            const startBtn = document.getElementById('otaStartBtn');
+            if (otaFile && (isBleConnected || isSimulatedBle) && !isOtaRunning) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                startBtn.classList.add('hover:opacity-90', 'active:scale-95');
+            } else {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-40', 'cursor-not-allowed');
+                startBtn.classList.remove('hover:opacity-90', 'active:scale-95');
+            }
+        }
+
+        async function startOtaUpdate() {
+            if (!otaFile || (!isBleConnected && !isSimulatedBle) || isOtaRunning) return;
+
+            isOtaRunning = true;
+            otaBytesTransferred = 0;
+            otaStartTime = performance.now();
+
+            const startBtn = document.getElementById('otaStartBtn');
+            const stopBtn = document.getElementById('otaStopBtn');
+            const statusText = document.getElementById('otaStatusText');
+            const statusBanner = document.getElementById('otaStatusBanner');
+
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-40', 'cursor-not-allowed');
+
+            stopBtn.disabled = false;
+            stopBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            stopBtn.classList.add('hover:opacity-90', 'active:scale-95');
+
+            statusText.innerText = "Starting OTA transmission...";
+            statusBanner.className = "text-[11px] font-mono p-2.5 rounded-xl bg-cyan-950 border border-cyan-800 text-neon-cyan flex items-center justify-between gap-2 animate-pulse";
+
+            // Stop sweep mode if currently running to isolate BLE traffic
+            if (typeof isSweeping !== 'undefined' && isSweeping) {
+                toggleSweepMode(false);
+            }
+
+            // --- Simulated BLE demo mode ---
+            if (isSimulatedBle) {
+                const chunkSize = 2048;
+                otaIntervalId = setInterval(() => {
+                    if (!isOtaRunning) return;
+                    otaBytesTransferred += chunkSize;
+                    if (otaBytesTransferred >= otaTotalBytes) {
+                        otaBytesTransferred = otaTotalBytes;
+                        finishOtaUpdate(true);
+                        return;
+                    }
+                    updateOtaProgressUI();
+                }, 64);
+                return;
+            }
+
+            try {
+                // =========================================================================
+                // ---- HIGH-SPEED CUSTOM NUS STREAM OTA (Alternatif B: 30 - 60 KB/s) ----
+                // =========================================================================
+                statusText.innerText = "Erasing flash partition on ESP32...";
+
+                otaBytesTransferred = 0;
+                otaFlashBytesWritten = 0;
+
+                const readyPromise = waitForOtaReadySignal(10000);
+                await sendCommand({ cmd: "ota_start", size: otaTotalBytes });
+                await readyPromise;
+
+                statusText.innerText = "Flash ready. Streaming binary firmware (High-Speed NUS)...";
+
+                const arrayBuffer = await otaFile.arrayBuffer();
+                const uint8Array  = new Uint8Array(arrayBuffer);
+                const chunkSize   = 240; // Fits within 247-byte ATT MTU
+                let offset = 0;
+                let lastUiUpdateMs = 0;
+                let subPacketBatch = 0;
+
+                while (offset < uint8Array.length && isOtaRunning) {
+                    // Sliding window: pause if local offset is more than 32 KB ahead of ESP32 actual flash written bytes
+                    while (isOtaRunning && !isSimulatedBle && (offset - otaFlashBytesWritten > 32768)) {
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+
+                    const chunk = uint8Array.subarray(offset, offset + chunkSize);
+
+                    // Write binary chunk without response over NUS RX characteristic
+                    if (rxCharacteristic.writeValueWithoutResponse) {
+                        await rxCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await rxCharacteristic.writeValue(chunk);
+                    }
+
+                    offset += chunk.length;
+                    otaBytesTransferred = offset;
+
+                    // 6ms pacing for fast 28 KB/s transmission (~15s total for 600 KB)
+                    await new Promise(r => setTimeout(r, 6));
+
+                    const now = performance.now();
+                    if (now - lastUiUpdateMs >= 80 || offset >= uint8Array.length) {
+                        lastUiUpdateMs = now;
+                        updateOtaProgressUI();
+                    }
+                }
+
+                // Wait until ESP32 confirms 100% of bytes are written to flash partition
+                if (isOtaRunning && !isSimulatedBle) {
+                    statusText.innerText = "Waiting for ESP32 to finish writing remaining flash sectors...";
+                    const syncStart = performance.now();
+                    while (isOtaRunning && otaFlashBytesWritten < otaTotalBytes && (performance.now() - syncStart < 15000)) {
+                        await new Promise(r => setTimeout(r, 20));
+                    }
+                }
+
+                if (isOtaRunning) {
+                    statusText.innerText = "Verifying firmware checksum & rebooting ESP32...";
+                    const completionPromise = waitForOtaCompletionSignal(15000);
+                    await sendCommand({ cmd: "ota_end" });
+                    await completionPromise;
+                    finishOtaUpdate(true);
+                }
+            } catch (err) {
+                console.error("OTA Transmission Error:", err);
+                finishOtaUpdate(false, `OTA Failed: ${err.message}`);
+            }
+        }
+
+        function updateOtaProgressUI() {
+            const elapsedSec = (performance.now() - otaStartTime) / 1000;
+            const currentBytes = isSimulatedBle ? otaBytesTransferred : Math.min(otaFlashBytesWritten, otaTotalBytes);
+            const speedBps = (currentBytes > 0 && elapsedSec > 0) ? (currentBytes / elapsedSec) : 0;
+            const speedKbps = (speedBps / 1024).toFixed(2);
+            const remainingBytes = otaTotalBytes - currentBytes;
+            const remainingSec = speedBps > 0 ? (remainingBytes / speedBps) : 0;
+
+            const percent = (otaTotalBytes > 0) ? Math.min(100, (currentBytes / otaTotalBytes) * 100).toFixed(2) : '0.00';
+
+            document.getElementById('otaProgressBar').style.width = `${percent}%`;
+            document.getElementById('otaPercentText').innerText = `${percent}%`;
+            document.getElementById('otaBytesText').innerText = `${formatBytes(currentBytes)} / ${formatBytes(otaTotalBytes)}`;
+            document.getElementById('otaSpeedText').innerText = `${speedKbps} KB/s`;
+            document.getElementById('otaElapsedText').innerText = formatTime(elapsedSec);
+            document.getElementById('otaRemainingText').innerText = formatTime(remainingSec);
+
+            document.getElementById('otaStatusText').innerText = `Flashing ${formatBytes(currentBytes)} (${percent}%)`;
+        }
+
+        function finishOtaUpdate(success, reasonStr = null) {
+            clearInterval(otaIntervalId);
+            isOtaRunning = false;
+
+            const startBtn = document.getElementById('otaStartBtn');
+            const stopBtn = document.getElementById('otaStopBtn');
+            const statusText = document.getElementById('otaStatusText');
+            const statusBanner = document.getElementById('otaStatusBanner');
+
+            stopBtn.disabled = true;
+            stopBtn.classList.add('opacity-40', 'cursor-not-allowed');
+
+            if (success) {
+                document.getElementById('otaProgressBar').style.width = '100%';
+                document.getElementById('otaPercentText').innerText = '100.00%';
+                document.getElementById('otaRemainingText').innerText = '00:00';
+                statusText.innerText = "Update Completed! Rebooting ESP32...";
+                statusBanner.className = "text-[11px] font-mono p-2 rounded-lg bg-emerald-950 border border-emerald-800 text-neon-green text-center flex items-center justify-center gap-2";
+            } else {
+                statusText.innerText = reasonStr || "Update Aborted by user.";
+                statusBanner.className = "text-[11px] font-mono p-2 rounded-lg bg-rose-950 border border-rose-800 text-neon-crimson text-center flex items-center justify-center gap-2";
+            }
+
+            updateOtaStartButtonState();
+        }
+
+        function stopOtaUpdate() {
+            if (!isOtaRunning) return;
+            sendCommand({ cmd: "ota_abort" });
+            finishOtaUpdate(false);
+        }
+
+        function resetOtaProgressUI() {
+            document.getElementById('otaProgressBar').style.width = '0%';
+            document.getElementById('otaPercentText').innerText = '0.00%';
+            document.getElementById('otaBytesText').innerText = otaFile ? `0.00 KB / ${formatBytes(otaFile.size)}` : '0.00 KB / 0.00 KB';
+            document.getElementById('otaSpeedText').innerText = '0.00 KB/s';
+            document.getElementById('otaElapsedText').innerText = '00:00';
+            document.getElementById('otaRemainingText').innerText = '00:00';
+
+            updateBleUIState(isBleConnected || isSimulatedBle);
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0.00 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+        }
+
+        function formatTime(seconds) {
+            const sec = Math.floor(seconds);
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        /* ==========================================================================
+           9. ANIMATION & CANVAS WAVEFORM RENDER LOOP
+           ========================================================================== */
+        function animationLoop(timestamp) {
+            // Calculate Auto Sweep Step (Symmetrical Center-Based Sequence)
+            if (isSweeping && isPwmEnabled) {
+                const dt = (timestamp - lastSweepTimestamp) / 1000;
+                lastSweepTimestamp = timestamp;
+
+                if (sweepDwellTimer > 0) {
+                    sweepDwellTimer -= dt * 1000;
+                } else {
+                    let usStep = sweepSpeed * dt;
+
+                    if (sweepPhase === 0) { // Phase 0: Initial Dwell at centerPulse completed -> Move to maxPulse
+                        sweepPhase = 1;
+                    } else if (sweepPhase === 1) { // Phase 1: Move -> maxPulse (Continuous)
+                        let nextPulse = currentPulse + usStep;
+                        if (nextPulse >= maxPulse) {
+                            nextPulse = maxPulse;
+                            sweepPhase = 2;
+                            sweepDwellTimer = sweepDwell;
+                        }
+                        setPulseWidth(Math.round(nextPulse), false);
+                    } else if (sweepPhase === 2) { // Phase 2: Dwell at maxPulse completed -> Move to minPulse
+                        sweepPhase = 3;
+                    } else if (sweepPhase === 3) { // Phase 3: Move MAX -> MIN (Continuous, no center pause)
+                        let nextPulse = currentPulse - usStep;
+                        if (nextPulse <= minPulse) {
+                            nextPulse = minPulse;
+                            sweepPhase = 4;
+                            sweepDwellTimer = sweepDwell;
+                            completedCycles++;
+                            document.getElementById('cycleCounter').innerText = String(completedCycles).padStart(5, '0');
+                        }
+                        setPulseWidth(Math.round(nextPulse), false);
+                    } else if (sweepPhase === 4) { // Phase 4: Dwell at minPulse completed -> Move back to maxPulse (Phase 1)
+                        sweepPhase = 1;
+                    }
+                }
+            }
+
+            // Draw Oscilloscope Canvas Frame (only if data changed)
+            drawWaveformCanvas();
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        function drawWaveformCanvas() {
+            // Dirty-flag: skip redraw if pulse and PWM state haven't changed
+            if (currentPulse === canvasLastPulse && isPwmEnabled === canvasLastPwmEnabled) return;
+            canvasLastPulse = currentPulse;
+            canvasLastPwmEnabled = isPwmEnabled;
+
+            const width  = canvas.width  / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, width, height);
+
+            const minX   = 15;
+            const maxX   = width - 15;
+            const rangeX = maxX - minX;
+
+            const activePulseRatio = (currentPulse - minPulse) / (maxPulse - minPulse);
+            const pulseWidthPx     = 20 + activePulseRatio * (rangeX - 60);
+
+            const topY = height * 0.25;
+            const botY = height * 0.75;
+
+            // Center reference dashed line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(minX + rangeX / 2, 0);
+            ctx.lineTo(minX + rangeX / 2, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (isPwmEnabled) {
+                // Active Square Waveform
+                ctx.beginPath();
+                ctx.strokeStyle  = '#00F3FF';
+                ctx.lineWidth    = 3;
+                ctx.shadowColor  = '#00F3FF';
+                ctx.shadowBlur   = 10;
+                ctx.moveTo(0, botY);
+                ctx.lineTo(minX, botY);
+                ctx.lineTo(minX, topY);
+                ctx.lineTo(minX + pulseWidthPx, topY);
+                ctx.lineTo(minX + pulseWidthPx, botY);
+                ctx.lineTo(width, botY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Pulse area fill
+                ctx.fillStyle = 'rgba(0, 243, 255, 0.1)';
+                ctx.beginPath();
+                ctx.moveTo(minX, botY);
+                ctx.lineTo(minX, topY);
+                ctx.lineTo(minX + pulseWidthPx, topY);
+                ctx.lineTo(minX + pulseWidthPx, botY);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // PWM OFF: flat muted line
+                ctx.beginPath();
+                ctx.strokeStyle = '#FF2E63';
+                ctx.lineWidth   = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.moveTo(0, botY);
+                ctx.lineTo(width, botY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle  = 'rgba(255, 46, 99, 0.7)';
+                ctx.font       = 'bold 10px JetBrains Mono';
+                ctx.textAlign  = 'center';
+                ctx.fillText('PWM OUTPUT MUTED [OFF]', width / 2, height / 2);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "UILib",
+  "version": "1.0.0",
+  "description": "Reusable UI component framework for small monochrome OLED displays (72x40) using U8g2",
+  "keywords": "oled, ui, u8g2, display, embedded, component",
+  "authors": [
+    {
+      "name": "ServoLab",
+      "maintainer": true
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "headers": "UIFramework.h"
+}
