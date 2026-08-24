@@ -146,7 +146,7 @@
                     <h1 class="text-xs font-bold tracking-wider text-white uppercase flex items-center gap-1.5">
                         ESP32-C3 <span class="text-[9px] px-1 py-0.5 rounded bg-cyan-950 text-neon-cyan border border-cyan-800/50">SERVO LAB</span>
                     </h1>
-                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v1.18</p>
+                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v0.95</p>
                 </div>
             </div>
 
@@ -268,7 +268,6 @@
                         <!-- Stationary Display Text -->
                         <div class="text-center pointer-events-none z-10 flex flex-col items-center justify-center">
                             <div id="knobPulseText" class="text-[13px] font-bold font-mono text-neon-crimson glow-crimson transition-colors duration-200">PWM OFF</div>
-                            <div id="knobStatusBadge" class="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-950 text-neon-crimson border border-rose-800/50 mt-0.5">PWM OFF</div>
                         </div>
                     </div>
 
@@ -715,7 +714,7 @@
             if (data.freq      !== undefined) { pwmFrequency = data.freq;     document.getElementById('cfgFrequency').value   = pwmFrequency; }
             if (data.pin       !== undefined) { pwmGpioPin = data.pin;        document.getElementById('cfgGpioPin').value     = String(pwmGpioPin); }
             if (data.pwm_en    !== undefined) isPwmEnabled = data.pwm_en;
-            if (data.high_us   !== undefined && !isDraggingKnob) {
+            if (data.high_us   !== undefined && !isDraggingKnob && !isSweeping) {
                 currentPulse = data.high_us;
                 accumulatedPulse = currentPulse;
             }
@@ -982,7 +981,7 @@
             }
             // Regular 1Hz telemetry status update
             if (data.pwm_en  !== undefined) isPwmEnabled = data.pwm_en;
-            if (data.high_us !== undefined && !isDraggingKnob) {
+            if (data.high_us !== undefined && !isDraggingKnob && !isSweeping) {
                 currentPulse = data.high_us;
                 accumulatedPulse = currentPulse;
             }
@@ -1008,7 +1007,18 @@
                 return;
             }
 
-            commandQueue.push(cmdObj);
+            // Coalesce high-frequency pulse width commands to prevent queue backlog
+            if (cmdObj.cmd === 'set_pwm_hightime') {
+                const existingIdx = commandQueue.findIndex(c => c.cmd === 'set_pwm_hightime');
+                if (existingIdx !== -1) {
+                    commandQueue[existingIdx] = cmdObj;
+                } else {
+                    commandQueue.push(cmdObj);
+                }
+            } else {
+                commandQueue.push(cmdObj);
+            }
+
             if (isBleWriting) return;
 
             isBleWriting = true;
@@ -1222,7 +1232,6 @@
 
             const knobPulseElem = document.getElementById('knobPulseText');
             const knobNeedle = document.getElementById('knobNeedle');
-            const knobStatusBadge = document.getElementById('knobStatusBadge');
 
             if (isPwmEnabled) {
                 knobPulseElem.innerText = `${currentPulse} µs`;
@@ -1230,19 +1239,11 @@
                 if (knobNeedle) {
                     knobNeedle.className = 'absolute top-1.5 w-1.5 h-5 bg-neon-cyan rounded-full shadow-[0_0_8px_#00F3FF] transition-colors duration-200';
                 }
-                if (knobStatusBadge) {
-                    knobStatusBadge.innerText = 'PWM ON';
-                    knobStatusBadge.className = 'text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-cyan-950 text-neon-cyan border border-cyan-800/50 mt-0.5';
-                }
             } else {
                 knobPulseElem.innerText = `PWM OFF`;
                 knobPulseElem.className = 'text-[13px] font-bold font-mono text-neon-crimson glow-crimson transition-colors duration-200';
                 if (knobNeedle) {
                     knobNeedle.className = 'absolute top-1.5 w-1.5 h-5 bg-slate-600 rounded-full transition-colors duration-200';
-                }
-                if (knobStatusBadge) {
-                    knobStatusBadge.innerText = 'PWM OFF';
-                    knobStatusBadge.className = 'text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-950 text-neon-crimson border border-rose-800/50 mt-0.5';
                 }
             }
 

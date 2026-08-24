@@ -5,7 +5,7 @@ UIManager::UIManager()
     : bleIcon_(0, 0, 10, 16, 74, u8g2_font_open_iconic_embedded_2x_t),
       signalBar_(12, 3, 34, 10, 7, 4, 1),
       rssiTextLabel_(50, 3, "---", u8g2_font_neuecraft_tr, 22, 11),
-      PWMStatusTextLabel_(0, 20, "PWM IS OFF! SERVO LAB v0", u8g2_font_profont17_tr, 72, 20),
+      PWMStatusTextLabel_(0, 20, "PWM IS OFF! SERVO LAB v0.90", u8g2_font_profont17_tr, 72, 20),
       BLEConnectionStatusTextLabel_(16, 3, "BLE NOT CONNECTED! SEARCH FOR \"ESP32-SERVOLAB\" ON YOUR PHONE.", u8g2_font_neuecraft_tr, 54, 11),
       PWMHighTimeTextLabel_(0, 17, "----", u8g2_font_profont22_tr, 72, 16),
       PWMHighTimeProgress_(0, 35, 72, 5)
