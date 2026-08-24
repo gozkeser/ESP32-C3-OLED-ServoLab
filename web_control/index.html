@@ -503,6 +503,21 @@
                 </button>
             </div>
 
+            <!-- Installed Firmware & Update Status Banner (Always Visible) -->
+            <div class="bg-obsidian-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
+                <div>
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Installed FW Version</div>
+                    <div id="deviceInstalledFwText" class="font-bold text-slate-200 mt-0.5 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-500" id="deviceFwDot"></span>
+                        <span id="deviceFwVal">Not Connected</span>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col items-end">
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Update Status</div>
+                    <span id="ghUpdateStatusBadge" class="mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Check Required</span>
+                </div>
+            </div>
+
             <!-- Firmware Source Selector Tabs -->
             <div class="grid grid-cols-2 gap-1 bg-obsidian-900/80 p-1 rounded-xl border border-slate-700/60 font-mono text-xs">
                 <button id="otaSourceTabLocal" onclick="setOtaSourceTab('local')" class="py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5">
@@ -532,7 +547,7 @@
                 <div class="flex items-center gap-2">
                     <div class="relative flex-1">
                         <i class="fa-brands fa-github absolute left-3 top-2.5 text-slate-400"></i>
-                        <input type="text" id="githubRepoInput" value="gozkeser/esp32-servo-tester" placeholder="owner/repository" class="w-full bg-obsidian-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white outline-none focus:border-neon-cyan font-mono">
+                        <input type="text" id="githubRepoInput" value="gozkeser/ESP32-C3-OLED-ServoLab" placeholder="owner/repository" class="w-full bg-obsidian-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white outline-none focus:border-neon-cyan font-mono">
                     </div>
                     <button onclick="checkGitHubRelease()" class="btn-3d px-3 py-1.5 rounded-xl text-xs font-bold text-neon-cyan hover:text-white shrink-0">
                         <i class="fa-solid fa-arrows-rotate mr-1"></i> Check Update
@@ -540,20 +555,39 @@
                 </div>
 
                 <!-- GitHub Release Result Card -->
-                <div id="githubReleaseCard" class="hidden bg-obsidian-900/90 border border-slate-800 rounded-xl p-3 space-y-2 text-xs">
+                <div id="githubReleaseCard" class="hidden bg-obsidian-900/90 border border-slate-800 rounded-xl p-2.5 space-y-2 text-xs">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             <span id="ghTagBadge" class="px-2 py-0.5 rounded-full bg-cyan-950 text-neon-cyan border border-cyan-800 font-bold text-[10px]">v1.0.0</span>
-                            <span id="ghReleaseTitle" class="font-bold text-slate-200 truncate max-w-[180px]">Latest Release</span>
+                            <span id="ghReleaseTitle" class="font-bold text-slate-200 truncate max-w-[170px]">Latest Release</span>
                         </div>
                         <span id="ghFileSize" class="text-[10px] text-slate-400">0 KB</span>
                     </div>
-                    <div id="ghReleaseBody" class="text-[10px] text-slate-400 line-clamp-2 italic bg-obsidian-950 p-1.5 rounded border border-slate-800/80">
+
+                    <!-- Expandable / Scrollable Changelog Area (+50% Height) -->
+                    <div id="ghReleaseBody" class="text-[10px] text-slate-300 italic bg-obsidian-950 p-2 rounded-lg border border-slate-800 max-h-20 overflow-y-auto whitespace-pre-line leading-relaxed">
                         No changelog provided.
                     </div>
-                    <button id="ghDownloadBtn" onclick="downloadAndLoadGitHubFirmware()" class="w-full py-1.5 rounded-lg bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> Download & Ready to Flash
-                    </button>
+
+                    <!-- Up to Date Notice -->
+                    <div id="ghUpToDateNotice" class="hidden bg-emerald-950/80 border border-emerald-800 text-neon-green rounded-xl p-2.5 text-center text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-sm"></i> Your device is running the latest version.
+                    </div>
+
+                    <!-- Dev / Newer Version Notice -->
+                    <div id="ghDevNotice" class="hidden bg-amber-950/80 border border-amber-800 text-neon-yellow rounded-xl p-2.5 text-center text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-code-branch text-sm"></i> Installed firmware is newer than the release.
+                    </div>
+
+                    <!-- Streamlined 2-Step Action Buttons (Only shown if Update Available) -->
+                    <div id="ghActionButtonsContainer" class="grid grid-cols-2 gap-1.5 pt-0.5">
+                        <a id="ghDirectDownloadLink" href="#" target="_blank" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-neon-cyan hover:text-white flex items-center justify-center gap-1 text-[11px]">
+                            <i class="fa-solid fa-download"></i> 1. Download .bin
+                        </a>
+                        <button onclick="document.getElementById('otaFileInput').click()" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-slate-200 hover:text-neon-cyan flex items-center justify-center gap-1 text-[11px]">
+                            <i class="fa-solid fa-folder-open"></i> 2. Pick File
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -622,6 +656,7 @@
         let pwmFrequency = 50;         // Default PWM Refresh Rate in Hz
         let pwmGpioPin = 0;            // Default PWM Output GPIO Pin
         let liveRssi = -99;            // RSSI Signal Strength
+        let deviceFirmwareVersion = null; // Installed firmware version reported by ESP32
 
         // Master Control States
         let activeMode = 'manual';     // Active mode: 'manual', 'sweep', 'step'
@@ -714,6 +749,10 @@
             if (data.freq      !== undefined) { pwmFrequency = data.freq;     document.getElementById('cfgFrequency').value   = pwmFrequency; }
             if (data.pin       !== undefined) { pwmGpioPin = data.pin;        document.getElementById('cfgGpioPin').value     = String(pwmGpioPin); }
             if (data.pwm_en    !== undefined) isPwmEnabled = data.pwm_en;
+            if (data.fw_ver    !== undefined) {
+                deviceFirmwareVersion = data.fw_ver;
+                updateDeviceVersionUI();
+            }
             if (data.high_us   !== undefined && !isDraggingKnob && !isSweeping) {
                 currentPulse = data.high_us;
                 accumulatedPulse = currentPulse;
@@ -800,7 +839,9 @@
             if (forceSimulate) {
                 isSimulatedBle = true;
                 isBleConnected = false;
+                deviceFirmwareVersion = "v0.9.0 (Simulated)";
                 updateBleUIState(true, false, "ESP32-C3 (Simulated)");
+                updateDeviceVersionUI();
                 return;
             }
 
@@ -873,6 +914,7 @@
                 isSimulatedBle = false;
                 const connectedName = bleDevice ? bleDevice.name : "ESP32-ServoLab";
                 updateBleUIState(true, false, connectedName);
+                updateDeviceVersionUI();
 
                 // config_sync will be sent automatically by ESP32 after CCCD subscription
                 // No need to request get_status manually
@@ -921,6 +963,16 @@
             bleotaCmdChar     = null;
             bleotaRecvChar    = null;
             liveRssi = -99;
+            deviceFirmwareVersion = null;
+            latestGitHubAsset = null;
+            const releaseCard = document.getElementById('githubReleaseCard');
+            if (releaseCard) releaseCard.classList.add('hidden');
+            const upToDateBadge = document.getElementById('ghUpdateStatusBadge');
+            if (upToDateBadge) {
+                upToDateBadge.innerText = "Check Required";
+                upToDateBadge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700";
+            }
+            updateDeviceVersionUI();
 
             if (isPwmEnabled) {
                 isPwmEnabled = false;
@@ -992,6 +1044,10 @@
             if (data.center_us !== undefined) centerPulse = data.center_us;
             if (data.max_us    !== undefined) maxPulse = data.max_us;
             if (data.pin       !== undefined) pwmGpioPin = data.pin;
+            if (data.fw_ver    !== undefined && data.fw_ver !== deviceFirmwareVersion) {
+                deviceFirmwareVersion = data.fw_ver;
+                updateDeviceVersionUI();
+            }
 
             scheduleUIUpdate();
         }
@@ -1597,6 +1653,7 @@
                 if (!isOtaRunning) {
                     resetOtaProgressUI();
                 }
+                updateDeviceVersionUI();
                 modal.classList.remove('hidden');
                 setTimeout(() => modal.classList.remove('opacity-0'), 10);
             } else {
@@ -1613,6 +1670,74 @@
 
         let activeOtaSource = 'local';
         let latestGitHubAsset = null;
+
+        function updateDeviceVersionUI() {
+            const valElem = document.getElementById('deviceFwVal');
+            const dotElem = document.getElementById('deviceFwDot');
+            if (!valElem) return;
+
+            if (deviceFirmwareVersion) {
+                valElem.innerText = deviceFirmwareVersion;
+                valElem.className = 'font-bold text-neon-cyan';
+                if (dotElem) dotElem.className = 'w-1.5 h-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_#00F3FF]';
+            } else if (isBleConnected || isSimulatedBle) {
+                const fallbackVer = isSimulatedBle ? 'v0.9.0 (Simulated)' : 'v0.9.0 (Legacy)';
+                valElem.innerText = fallbackVer;
+                valElem.className = 'font-bold text-slate-200';
+                if (dotElem) dotElem.className = 'w-1.5 h-1.5 rounded-full bg-neon-green';
+            } else {
+                valElem.innerText = 'Not Connected';
+                valElem.className = 'font-bold text-slate-400';
+                if (dotElem) dotElem.className = 'w-1.5 h-1.5 rounded-full bg-slate-500';
+            }
+
+            // Refresh comparison badge if GitHub release was already queried
+            if (latestGitHubAsset && latestGitHubAsset.version) {
+                updateVersionComparisonBadge(latestGitHubAsset.version);
+            }
+        }
+
+        function compareVersions(v1, v2) {
+            if (!v1 || !v2) return 0;
+            const clean = v => v.replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+            const a = clean(v1);
+            const b = clean(v2);
+            const len = Math.max(a.length, b.length);
+            for (let i = 0; i < len; i++) {
+                const valA = a[i] || 0;
+                const valB = b[i] || 0;
+                if (valA !== valB) return valA - valB;
+            }
+            return 0;
+        }
+
+        function updateVersionComparisonBadge(cloudTag) {
+            const badge = document.getElementById('ghUpdateStatusBadge');
+            if (!badge) return;
+
+            const currentVer = deviceFirmwareVersion || (isBleConnected ? 'v0.9.0' : (isSimulatedBle ? 'v0.9.0' : null));
+
+            if (!currentVer) {
+                badge.innerText = `Latest: ${cloudTag}`;
+                badge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700";
+                return;
+            }
+
+            const cmp = compareVersions(cloudTag, currentVer);
+            if (cmp > 0) {
+                // Cloud is newer -> Update Available
+                badge.innerText = `Update Available (${cloudTag})`;
+                badge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-neon-cyan border border-cyan-800 shadow-[0_0_8px_rgba(0,243,255,0.3)]";
+            } else if (cmp === 0) {
+                // Same version -> Up to date
+                badge.innerText = `Up to Date (${currentVer})`;
+                badge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-neon-green border border-emerald-800";
+            } else {
+                // Device is newer -> Dev / Custom Build
+                badge.innerText = `Newer / Dev (${currentVer})`;
+                badge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-950 text-neon-yellow border border-amber-800";
+            }
+        }
 
         function setOtaSourceTab(source) {
             activeOtaSource = source;
@@ -1631,6 +1756,7 @@
                 tabLocal.className = "py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
                 githubContainer.classList.remove('hidden');
                 localContainer.classList.add('hidden');
+                updateDeviceVersionUI();
             }
         }
 
@@ -1650,7 +1776,13 @@
                 if (!res.ok) throw new Error("No releases found or repository not found.");
 
                 const data = await res.json();
-                const binAsset = data.assets && data.assets.find(a => a.name.toLowerCase().endsWith('.bin'));
+                
+                // Prioritize firmware*.bin to avoid bootloader or partitions binary
+                const binAsset = data.assets && (
+                    data.assets.find(a => a.name.toLowerCase().includes('firmware') && a.name.toLowerCase().endsWith('.bin')) ||
+                    data.assets.find(a => a.name.toLowerCase().endsWith('.bin') && !a.name.toLowerCase().includes('bootloader') && !a.name.toLowerCase().includes('partition')) ||
+                    data.assets.find(a => a.name.toLowerCase().endsWith('.bin'))
+                );
 
                 if (!binAsset) {
                     alert(`Release ${data.tag_name} found, but no binary firmware file (.bin) was attached to the GitHub release.`);
@@ -1670,9 +1802,54 @@
                 document.getElementById('ghReleaseTitle').innerText = latestGitHubAsset.title;
                 document.getElementById('ghFileSize').innerText = formatBytes(latestGitHubAsset.size);
                 document.getElementById('ghReleaseBody').innerText = latestGitHubAsset.body;
+                
+                const directLink = document.getElementById('ghDirectDownloadLink');
+                if (directLink && latestGitHubAsset.downloadUrl) {
+                    directLink.href = latestGitHubAsset.downloadUrl;
+                    directLink.setAttribute('download', latestGitHubAsset.filename);
+                }
+
+                updateVersionComparisonBadge(latestGitHubAsset.version);
 
                 card.classList.remove('hidden');
-                if (statusText) statusText.innerText = `GitHub Release ${latestGitHubAsset.version} Found — Ready to Download`;
+
+                const currentVer = deviceFirmwareVersion || (isBleConnected ? 'v0.9.0' : (isSimulatedBle ? 'v0.9.0' : null));
+                const actionBtns = document.getElementById('ghActionButtonsContainer');
+                const upToDateNotice = document.getElementById('ghUpToDateNotice');
+                const devNotice = document.getElementById('ghDevNotice');
+                const releaseBody = document.getElementById('ghReleaseBody');
+
+                if (currentVer) {
+                    const cmp = compareVersions(latestGitHubAsset.version, currentVer);
+                    if (cmp > 0) {
+                        // Newer release available -> Show download & pick file buttons and changelog
+                        if (actionBtns) actionBtns.classList.remove('hidden');
+                        if (releaseBody) releaseBody.classList.remove('hidden');
+                        if (upToDateNotice) upToDateNotice.classList.add('hidden');
+                        if (devNotice) devNotice.classList.add('hidden');
+                        if (statusText) statusText.innerText = `New update ${latestGitHubAsset.version} available (Current: ${currentVer})`;
+                    } else if (cmp === 0) {
+                        // Already up to date -> HIDE download buttons & changelog, show clean confirmation
+                        if (actionBtns) actionBtns.classList.add('hidden');
+                        if (releaseBody) releaseBody.classList.add('hidden');
+                        if (upToDateNotice) upToDateNotice.classList.remove('hidden');
+                        if (devNotice) devNotice.classList.add('hidden');
+                        if (statusText) statusText.innerText = `Firmware is up to date (${currentVer})`;
+                    } else {
+                        // Installed version is newer -> HIDE download buttons & changelog, show dev notice
+                        if (actionBtns) actionBtns.classList.add('hidden');
+                        if (releaseBody) releaseBody.classList.add('hidden');
+                        if (upToDateNotice) upToDateNotice.classList.add('hidden');
+                        if (devNotice) devNotice.classList.remove('hidden');
+                        if (statusText) statusText.innerText = `Installed (${currentVer}) is newer than Release (${latestGitHubAsset.version})`;
+                    }
+                } else {
+                    if (actionBtns) actionBtns.classList.remove('hidden');
+                    if (releaseBody) releaseBody.classList.remove('hidden');
+                    if (upToDateNotice) upToDateNotice.classList.add('hidden');
+                    if (devNotice) devNotice.classList.add('hidden');
+                    if (statusText) statusText.innerText = `GitHub Release ${latestGitHubAsset.version} Found — Ready to Download`;
+                }
             } catch (err) {
                 console.warn("GitHub Release check error:", err);
                 alert("GitHub Check Error: " + err.message);
@@ -1680,37 +1857,36 @@
             }
         }
 
-        async function downloadAndLoadGitHubFirmware() {
-            if (!latestGitHubAsset || !latestGitHubAsset.downloadUrl) return;
+        function resetOtaModalState() {
+            otaFile = null;
+            otaTotalBytes = 0;
+            latestGitHubAsset = null;
 
-            const btn = document.getElementById('ghDownloadBtn');
-            const statusText = document.getElementById('otaStatusText');
+            const fileInput = document.getElementById('otaFileInput');
+            if (fileInput) fileInput.value = null;
 
-            try {
-                btn.disabled = true;
-                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Downloading Firmware...`;
-                if (statusText) statusText.innerText = "Downloading firmware from GitHub...";
-
-                const res = await fetch(latestGitHubAsset.downloadUrl);
-                if (!res.ok) throw new Error("Failed to download binary asset");
-
-                const blob = await res.blob();
-                otaFile = new File([blob], latestGitHubAsset.filename, { type: 'application/octet-stream' });
-                otaTotalBytes = otaFile.size;
-
-                document.getElementById('otaBytesText').innerText = `0 KB / ${formatBytes(otaTotalBytes)}`;
-                if (statusText) statusText.innerText = (isBleConnected || isSimulatedBle) ? "GitHub Firmware Downloaded & Ready to Flash!" : "Firmware downloaded — Connect BLE to start";
-
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-circle-check text-neon-green"></i> Loaded & Ready to Flash`;
-
-                updateOtaStartButtonState();
-            } catch (err) {
-                console.error("Download error:", err);
-                alert("Failed to download firmware binary from GitHub: " + err.message);
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> Download & Ready to Flash`;
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            if (fileNameDisplay) {
+                fileNameDisplay.innerText = "Click or Drag & Drop .bin File";
+                fileNameDisplay.className = "text-xs font-bold text-slate-300";
             }
+            const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+            if (fileSizeDisplay) fileSizeDisplay.innerText = "Supported formats: ESP32 binary firmware (.bin)";
+            const fileIcon = document.getElementById('fileIcon');
+            if (fileIcon) fileIcon.className = "fa-solid fa-file-code text-2xl text-slate-500";
+
+            const releaseCard = document.getElementById('githubReleaseCard');
+            if (releaseCard) releaseCard.classList.add('hidden');
+
+            const upToDateBadge = document.getElementById('ghUpdateStatusBadge');
+            if (upToDateBadge) {
+                upToDateBadge.innerText = "Check Required";
+                upToDateBadge.className = "mt-0.5 text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700";
+            }
+
+            resetOtaProgressUI();
+            updateOtaStartButtonState();
+            updateDeviceVersionUI();
         }
 
         function handleOtaFileSelect(e) {
@@ -1900,6 +2076,24 @@
                 document.getElementById('otaRemainingText').innerText = '00:00';
                 statusText.innerText = "Update Completed! Rebooting ESP32...";
                 statusBanner.className = "text-[11px] font-mono p-2 rounded-lg bg-emerald-950 border border-emerald-800 text-neon-green text-center flex items-center justify-center gap-2";
+
+                // Clear loaded file and release action state for clean post-update state
+                otaFile = null;
+                otaTotalBytes = 0;
+                latestGitHubAsset = null;
+                const fileInput = document.getElementById('otaFileInput');
+                if (fileInput) fileInput.value = null;
+                const fileNameDisplay = document.getElementById('fileNameDisplay');
+                if (fileNameDisplay) {
+                    fileNameDisplay.innerText = "Click or Drag & Drop .bin File";
+                    fileNameDisplay.className = "text-xs font-bold text-slate-300";
+                }
+                const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+                if (fileSizeDisplay) fileSizeDisplay.innerText = "Supported formats: ESP32 binary firmware (.bin)";
+                const fileIcon = document.getElementById('fileIcon');
+                if (fileIcon) fileIcon.className = "fa-solid fa-file-code text-2xl text-slate-500";
+                const releaseCard = document.getElementById('githubReleaseCard');
+                if (releaseCard) releaseCard.classList.add('hidden');
             } else {
                 statusText.innerText = reasonStr || "Update Aborted by user.";
                 statusBanner.className = "text-[11px] font-mono p-2 rounded-lg bg-rose-950 border border-rose-800 text-neon-crimson text-center flex items-center justify-center gap-2";

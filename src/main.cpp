@@ -88,7 +88,8 @@ void checkBluetoothTask() {
                 dataProvider.getPwmCenterHighTime(),
                 dataProvider.getPwmMaxHighTime(),
                 dataProvider.getPwmFrequency(),
-                dataProvider.getPwmGpioPin()
+                dataProvider.getPwmGpioPin(),
+                dataProvider.getFirmwareVersion()
             );
         }
     } else {
@@ -115,7 +116,8 @@ void checkBluetoothTask() {
             dataProvider.getPwmCenterHighTime(),
             dataProvider.getPwmMaxHighTime(),
             dataProvider.getPwmGpioPin(),
-            dataProvider.getRssi()
+            dataProvider.getRssi(),
+            dataProvider.getFirmwareVersion()
         );
     };
 

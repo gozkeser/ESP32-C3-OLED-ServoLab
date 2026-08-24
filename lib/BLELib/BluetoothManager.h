@@ -92,7 +92,7 @@ public:
      */
     void sendStatus(bool pwmEnabled, uint16_t highTimeUs, uint32_t freq,
                     uint16_t minUs, uint16_t centerUs, uint16_t maxUs,
-                    uint8_t pin, int16_t rssi);
+                    uint8_t pin, int16_t rssi, const char* fwVer = "");
 
     /**
      * @brief Sends a full config_sync packet to the connected client on first subscription.
@@ -100,7 +100,7 @@ public:
      */
     void sendConfigSync(bool pwmEnabled, uint16_t currentUs, uint16_t minUs,
                         uint16_t centerUs, uint16_t maxUs, uint32_t freqHz,
-                        uint8_t gpioPin);
+                        uint8_t gpioPin, const char* fwVer = "");
 
     /** @brief Disconnects the currently connected peer client and restarts advertising. */
     void disconnectClient();

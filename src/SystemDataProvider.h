@@ -20,6 +20,7 @@ public:
     // IDataProvider Interface Implementations
     // ----------------------------------------------------------
 
+    const char* getFirmwareVersion() const override { return FIRMWARE_VERSION; }
     bool isBleConnected() const override { return bleConnected_; }
     int16_t getRssi() const override { return rssi_; }
     bool isPwmEnabled() const override { return pwmEnabled_; }

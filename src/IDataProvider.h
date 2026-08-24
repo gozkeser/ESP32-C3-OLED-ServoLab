@@ -10,10 +10,15 @@
  * Provides a decoupled interface for UI components to query live system
  * metrics (e.g. BLE connectivity, RSSI signal strength, PWM/servo state).
  */
+#define FIRMWARE_VERSION "v0.9.2"
+
 class IDataProvider
 {
 public:
     virtual ~IDataProvider() = default;
+
+    /** @brief Returns installed firmware version string (e.g. "v0.9.0"). */
+    virtual const char* getFirmwareVersion() const = 0;
 
     /** @brief Returns true if BLE device is connected. */
     virtual bool isBleConnected() const = 0;

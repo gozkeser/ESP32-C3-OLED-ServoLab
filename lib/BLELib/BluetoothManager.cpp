@@ -228,26 +228,43 @@ bool BluetoothManager::hasConnectionChanged() {
 
 void BluetoothManager::sendStatus(bool pwmEnabled, uint16_t highTimeUs, uint32_t freq,
                                    uint16_t minUs, uint16_t centerUs, uint16_t maxUs,
-                                   uint8_t pin, int16_t rssi) {
-    char buf[192];
-    snprintf(buf, sizeof(buf),
-             "{\"type\":\"status\",\"pwm_en\":%s,\"high_us\":%u,\"freq\":%u,\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,\"pin\":%u,\"rssi\":%d}",
-             pwmEnabled ? "true" : "false", highTimeUs, (unsigned int)freq,
-             minUs, centerUs, maxUs, (unsigned int)pin, rssi);
+                                   uint8_t pin, int16_t rssi, const char* fwVer) {
+    char buf[256];
+    if (fwVer && fwVer[0] != '\0') {
+        snprintf(buf, sizeof(buf),
+                 "{\"type\":\"status\",\"fw_ver\":\"%s\",\"pwm_en\":%s,\"high_us\":%u,\"freq\":%u,\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,\"pin\":%u,\"rssi\":%d}",
+                 fwVer, pwmEnabled ? "true" : "false", highTimeUs, (unsigned int)freq,
+                 minUs, centerUs, maxUs, (unsigned int)pin, rssi);
+    } else {
+        snprintf(buf, sizeof(buf),
+                 "{\"type\":\"status\",\"pwm_en\":%s,\"high_us\":%u,\"freq\":%u,\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,\"pin\":%u,\"rssi\":%d}",
+                 pwmEnabled ? "true" : "false", highTimeUs, (unsigned int)freq,
+                 minUs, centerUs, maxUs, (unsigned int)pin, rssi);
+    }
     write(std::string(buf));
 }
 
 void BluetoothManager::sendConfigSync(bool pwmEnabled, uint16_t currentUs,
                                        uint16_t minUs, uint16_t centerUs, uint16_t maxUs,
-                                       uint32_t freqHz, uint8_t gpioPin) {
+                                       uint32_t freqHz, uint8_t gpioPin, const char* fwVer) {
     char buf[256];
-    snprintf(buf, sizeof(buf),
-             "{\"type\":\"config_sync\",\"pwm_en\":%s,\"high_us\":%u,"
-             "\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,"
-             "\"freq\":%u,\"pin\":%u}",
-             pwmEnabled ? "true" : "false",
-             currentUs, minUs, centerUs, maxUs,
-             (unsigned int)freqHz, (unsigned int)gpioPin);
+    if (fwVer && fwVer[0] != '\0') {
+        snprintf(buf, sizeof(buf),
+                 "{\"type\":\"config_sync\",\"fw_ver\":\"%s\",\"pwm_en\":%s,\"high_us\":%u,"
+                 "\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,"
+                 "\"freq\":%u,\"pin\":%u}",
+                 fwVer, pwmEnabled ? "true" : "false",
+                 currentUs, minUs, centerUs, maxUs,
+                 (unsigned int)freqHz, (unsigned int)gpioPin);
+    } else {
+        snprintf(buf, sizeof(buf),
+                 "{\"type\":\"config_sync\",\"pwm_en\":%s,\"high_us\":%u,"
+                 "\"min_us\":%u,\"center_us\":%u,\"max_us\":%u,"
+                 "\"freq\":%u,\"pin\":%u}",
+                 pwmEnabled ? "true" : "false",
+                 currentUs, minUs, centerUs, maxUs,
+                 (unsigned int)freqHz, (unsigned int)gpioPin);
+    }
     write(std::string(buf));
     Serial.println("[BLE]: config_sync sent to client.");
 }
