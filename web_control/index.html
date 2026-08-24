@@ -53,6 +53,12 @@
             user-select: none;
             -webkit-user-select: none;
             overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus, button:focus-visible, a:focus, a:focus-visible, input:focus {
+            outline: none !important;
+            box-shadow: none;
         }
 
         /* Prevent scroll gestures during knob interaction */
@@ -146,7 +152,7 @@
                     <h1 class="text-xs font-bold tracking-wider text-white uppercase flex items-center gap-1.5">
                         ESP32-C3 <span class="text-[9px] px-1 py-0.5 rounded bg-cyan-950 text-neon-cyan border border-cyan-800/50">SERVO LAB</span>
                     </h1>
-                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v0.95</p>
+                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v0.9.6</p>
                 </div>
             </div>
 
@@ -479,32 +485,32 @@
 
     <!-- Bluetooth OTA Firmware Update Modal -->
     <div id="otaModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden opacity-0 transition-opacity duration-200">
-        <div class="bg-obsidian-800 border border-slate-700 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-obsidian-800 border border-slate-700 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-3.5 space-y-2.5 shadow-2xl max-h-[92vh] overflow-y-auto">
             
             <!-- Modal Header -->
-            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+            <div class="flex items-center justify-between pb-0.5">
                 <div class="flex items-center space-x-2">
                     <i class="fa-solid fa-cloud-arrow-up text-neon-cyan text-base"></i>
                     <h2 class="text-sm font-bold text-white uppercase tracking-wider">OTA Firmware Update</h2>
                 </div>
-                <button onclick="toggleOtaModal(false)" class="text-slate-400 hover:text-white p-1">
+                <button onclick="toggleOtaModal(false)" class="text-slate-400 hover:text-white p-1 outline-none">
                     <i class="fa-solid fa-xmark text-base"></i>
                 </button>
             </div>
 
             <!-- Status Banner -->
-            <div id="otaStatusBanner" class="text-[11px] font-mono p-2.5 rounded-xl bg-rose-950/60 border border-rose-900/80 text-rose-300 flex items-center justify-between gap-2">
+            <div id="otaStatusBanner" class="text-[11px] font-mono py-1.5 px-2.5 rounded-xl bg-rose-950/60 border border-rose-900/80 text-rose-300 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                     <i id="otaStatusIcon" class="fa-solid fa-circle-exclamation text-neon-crimson"></i>
                     <span id="otaStatusText">Bluetooth Disconnected</span>
                 </div>
-                <button id="demoBleBtn" onclick="toggleBleConnection(true)" class="btn-3d px-2 py-1 rounded-lg text-[10px] font-mono font-bold text-neon-cyan hover:text-white shrink-0">
+                <button id="demoBleBtn" onclick="toggleBleConnection(true)" class="btn-3d px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold text-neon-cyan hover:text-white shrink-0 outline-none">
                     <i class="fa-solid fa-play mr-1"></i> Demo Mode
                 </button>
             </div>
 
             <!-- Installed Firmware & Update Status Banner (Always Visible) -->
-            <div class="bg-obsidian-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
+            <div class="bg-obsidian-900/90 border border-slate-800 rounded-xl py-1.5 px-2.5 flex items-center justify-between text-xs font-mono">
                 <div>
                     <div class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Installed FW Version</div>
                     <div id="deviceInstalledFwText" class="font-bold text-slate-200 mt-0.5 flex items-center gap-1.5">
@@ -519,37 +525,35 @@
             </div>
 
             <!-- Firmware Source Selector Tabs -->
-            <div class="grid grid-cols-2 gap-1 bg-obsidian-900/80 p-1 rounded-xl border border-slate-700/60 font-mono text-xs">
-                <button id="otaSourceTabLocal" onclick="setOtaSourceTab('local')" class="py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5">
+            <div class="grid grid-cols-2 gap-1 bg-obsidian-900/80 p-0.5 rounded-xl border border-slate-700/60 font-mono text-xs select-none">
+                <button id="otaSourceTabLocal" onclick="setOtaSourceTab('local')" class="py-1.5 rounded-lg font-bold text-center bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5 outline-none">
                     <i class="fa-solid fa-hard-drive"></i> Local File
                 </button>
-                <button id="otaSourceTabGithub" onclick="setOtaSourceTab('github')" class="py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5">
+                <button id="otaSourceTabGithub" onclick="setOtaSourceTab('github')" class="py-1.5 rounded-lg font-bold text-center text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1.5 outline-none">
                     <i class="fa-brands fa-github"></i> GitHub Cloud
                 </button>
             </div>
 
             <!-- Firmware Source: Local File Container -->
-            <div id="localFileContainer" class="space-y-1.5 font-mono text-xs">
-                <label class="block text-slate-400 font-semibold text-[11px] uppercase tracking-wider">Select Firmware Image (.bin):</label>
-                <div id="fileDropZone" onclick="document.getElementById('otaFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-neon-cyan/60 rounded-xl p-4 text-center cursor-pointer transition-colors bg-obsidian-900/50">
+            <div id="localFileContainer" class="space-y-1 font-mono text-xs">
+                <div id="fileDropZone" onclick="document.getElementById('otaFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-neon-cyan/60 rounded-xl p-3 text-center cursor-pointer transition-colors bg-obsidian-900/50">
                     <input type="file" id="otaFileInput" accept=".bin" class="hidden" onclick="this.value=null" onchange="handleOtaFileSelect(event)">
-                    <div class="space-y-1">
-                        <i class="fa-solid fa-file-code text-2xl text-slate-500" id="fileIcon"></i>
+                    <div class="space-y-0.5">
+                        <i class="fa-solid fa-file-code text-xl text-slate-500" id="fileIcon"></i>
                         <div id="fileNameDisplay" class="text-xs font-bold text-slate-300">Click or Drag & Drop .bin File</div>
-                        <div id="fileSizeDisplay" class="text-[10px] text-slate-400">Supported formats: ESP32 binary firmware (.bin)</div>
+                        <div id="fileSizeDisplay" class="text-[9px] text-slate-400">Supported formats: ESP32 binary firmware (.bin)</div>
                     </div>
                 </div>
             </div>
 
             <!-- Firmware Source: GitHub Cloud Container -->
-            <div id="githubCloudContainer" class="space-y-2 font-mono text-xs hidden">
-                <label class="block text-slate-400 font-semibold text-[11px] uppercase tracking-wider">GitHub Repository (Owner/Repo):</label>
-                <div class="flex items-center gap-2">
+            <div id="githubCloudContainer" class="space-y-1.5 font-mono text-xs hidden">
+                <div class="flex items-center gap-1.5">
                     <div class="relative flex-1">
                         <i class="fa-brands fa-github absolute left-3 top-2.5 text-slate-400"></i>
                         <input type="text" id="githubRepoInput" value="gozkeser/ESP32-C3-OLED-ServoLab" placeholder="owner/repository" class="w-full bg-obsidian-900 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white outline-none focus:border-neon-cyan font-mono">
                     </div>
-                    <button onclick="checkGitHubRelease()" class="btn-3d px-3 py-1.5 rounded-xl text-xs font-bold text-neon-cyan hover:text-white shrink-0">
+                    <button onclick="checkGitHubRelease()" class="btn-3d px-3 py-1.5 rounded-xl text-xs font-bold text-neon-cyan hover:text-white shrink-0 outline-none">
                         <i class="fa-solid fa-arrows-rotate mr-1"></i> Check Update
                     </button>
                 </div>
@@ -581,10 +585,10 @@
 
                     <!-- Streamlined 2-Step Action Buttons (Only shown if Update Available) -->
                     <div id="ghActionButtonsContainer" class="grid grid-cols-2 gap-1.5 pt-0.5">
-                        <a id="ghDirectDownloadLink" href="#" target="_blank" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-neon-cyan hover:text-white flex items-center justify-center gap-1 text-[11px]">
+                        <a id="ghDirectDownloadLink" href="#" target="_blank" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-neon-cyan hover:text-white flex items-center justify-center gap-1 text-[11px] outline-none">
                             <i class="fa-solid fa-download"></i> 1. Download .bin
                         </a>
-                        <button onclick="document.getElementById('otaFileInput').click()" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-slate-200 hover:text-neon-cyan flex items-center justify-center gap-1 text-[11px]">
+                        <button onclick="document.getElementById('otaFileInput').click()" class="btn-3d py-2 px-2 rounded-xl text-center font-bold text-slate-200 hover:text-neon-cyan flex items-center justify-center gap-1 text-[11px] outline-none">
                             <i class="fa-solid fa-folder-open"></i> 2. Pick File
                         </button>
                     </div>
@@ -592,42 +596,42 @@
             </div>
 
             <!-- Progress Bar -->
-            <div class="space-y-2 font-mono">
+            <div class="space-y-1.5 font-mono">
                 <div class="flex justify-between items-center text-xs">
                     <span class="text-slate-400 uppercase text-[10px] tracking-wider font-semibold">UPDATE PROGRESS</span>
                     <span id="otaPercentText" class="text-neon-cyan font-bold">0.0%</span>
                 </div>
-                <div class="w-full bg-obsidian-900 rounded-full h-3 p-0.5 border border-slate-700/80 overflow-hidden relative">
+                <div class="w-full bg-obsidian-900 rounded-full h-2.5 p-0.5 border border-slate-700/80 overflow-hidden relative">
                     <div id="otaProgressBar" class="bg-gradient-to-r from-cyan-500 to-neon-green h-full rounded-full transition-all duration-150 w-0 shadow-[0_0_10px_#00F3FF]"></div>
                 </div>
             </div>
 
             <!-- Telemetry Metrics Grid -->
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+            <div class="grid grid-cols-2 gap-1.5 text-xs font-mono">
+                <div class="bg-obsidian-900/90 border border-slate-800 p-1.5 rounded-xl">
                     <div class="text-[9px] uppercase text-slate-400">Transferred</div>
                     <div id="otaBytesText" class="text-xs font-bold text-white mt-0.5">0 KB / 0 KB</div>
                 </div>
-                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                <div class="bg-obsidian-900/90 border border-slate-800 p-1.5 rounded-xl">
                     <div class="text-[9px] uppercase text-slate-400">Transfer Speed</div>
                     <div id="otaSpeedText" class="text-xs font-bold text-neon-yellow mt-0.5">0.0 KB/s</div>
                 </div>
-                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                <div class="bg-obsidian-900/90 border border-slate-800 p-1.5 rounded-xl">
                     <div class="text-[9px] uppercase text-slate-400">Elapsed Time</div>
                     <div id="otaElapsedText" class="text-xs font-bold text-slate-300 mt-0.5">00:00</div>
                 </div>
-                <div class="bg-obsidian-900/90 border border-slate-800 p-2 rounded-xl">
+                <div class="bg-obsidian-900/90 border border-slate-800 p-1.5 rounded-xl">
                     <div class="text-[9px] uppercase text-slate-400">Remaining Time</div>
                     <div id="otaRemainingText" class="text-xs font-bold text-neon-cyan mt-0.5">00:00</div>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-                <button id="otaStartBtn" onclick="startOtaUpdate()" disabled class="py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 opacity-40 cursor-not-allowed transition">
+            <div class="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-800">
+                <button id="otaStartBtn" onclick="startOtaUpdate()" disabled class="py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold uppercase tracking-wider text-xs shadow-lg shadow-cyan-500/20 opacity-40 cursor-not-allowed transition outline-none">
                     <i class="fa-solid fa-upload mr-1"></i> Start Update
                 </button>
-                <button id="otaStopBtn" onclick="stopOtaUpdate()" disabled class="py-2.5 rounded-xl bg-rose-950 border border-rose-800/80 text-neon-crimson font-bold uppercase tracking-wider text-xs opacity-40 cursor-not-allowed transition">
+                <button id="otaStopBtn" onclick="stopOtaUpdate()" disabled class="py-2 rounded-xl bg-rose-950 border border-rose-800/80 text-neon-crimson font-bold uppercase tracking-wider text-xs opacity-40 cursor-not-allowed transition outline-none">
                     <i class="fa-solid fa-hand mr-1"></i> Abort / Stop
                 </button>
             </div>
@@ -1431,7 +1435,7 @@
                 sweepPhase = 0;
                 setPulseWidth(centerPulse, true);
                 sweepDwellTimer = sweepDwell; // Initial dwell at center before launching!
-                btnText.innerText = "Pause Sweep";
+                btnText.innerText = "Stop Sweep";
                 icon.className = "fa-solid fa-pause";
                 btn.classList.replace('bg-neon-cyan', 'bg-neon-crimson');
                 btn.classList.replace('text-slate-950', 'text-white');
@@ -1747,13 +1751,13 @@
             const githubContainer = document.getElementById('githubCloudContainer');
 
             if (source === 'local') {
-                tabLocal.className = "py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5";
-                tabGithub.className = "py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                tabLocal.className = "py-1.5 rounded-lg font-bold text-center bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5 outline-none";
+                tabGithub.className = "py-1.5 rounded-lg font-bold text-center text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1.5 outline-none";
                 localContainer.classList.remove('hidden');
                 githubContainer.classList.add('hidden');
             } else {
-                tabGithub.className = "py-1.5 rounded-lg font-bold text-center transition-all bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5";
-                tabLocal.className = "py-1.5 rounded-lg font-bold text-center transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                tabGithub.className = "py-1.5 rounded-lg font-bold text-center bg-obsidian-800 text-neon-cyan border border-cyan-800/60 shadow flex items-center justify-center gap-1.5 outline-none";
+                tabLocal.className = "py-1.5 rounded-lg font-bold text-center text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1.5 outline-none";
                 githubContainer.classList.remove('hidden');
                 localContainer.classList.add('hidden');
                 updateDeviceVersionUI();
