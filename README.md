@@ -52,6 +52,8 @@ Featuring real-time on-board **SSD1306 OLED graphics**, non-volatile settings st
 
 The project includes a standalone, zero-installation **Web Bluetooth Dashboard** located in the [`web_control/`](web_control/) directory (`index.html`).
 
+![Screenshot](.github/assets/screenshot.png)
+
 ### Features & Test Modes
 1. **Manual Mode**:
    - 3D Skeuomorphic Rotary Dial with touch dragging & angle tracking.
