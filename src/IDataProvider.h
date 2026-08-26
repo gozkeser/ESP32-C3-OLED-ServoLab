@@ -10,7 +10,7 @@
  * Provides a decoupled interface for UI components to query live system
  * metrics (e.g. BLE connectivity, RSSI signal strength, PWM/servo state).
  */
-#define FIRMWARE_VERSION "v0.9.2"
+#define FIRMWARE_VERSION "v0.9.3"
 
 class IDataProvider
 {
