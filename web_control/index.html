@@ -152,7 +152,7 @@
                     <h1 class="text-xs font-bold tracking-wider text-white uppercase flex items-center gap-1.5">
                         ESP32-C3 <span class="text-[9px] px-1 py-0.5 rounded bg-cyan-950 text-neon-cyan border border-cyan-800/50">SERVO LAB</span>
                     </h1>
-                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v0.9.7</p>
+                    <p class="text-[9px] text-slate-400 font-mono">Web Bluetooth • v0.9.8</p>
                 </div>
             </div>
 
@@ -332,7 +332,7 @@
                             <span class="text-slate-400">SIGNAL SLEW RATE</span>
                             <span id="sweepSpeedVal" class="text-neon-cyan font-bold">1000 µs/s</span>
                         </div>
-                        <input type="range" id="sweepSpeedSlider" min="200" max="2000" step="50" value="500" oninput="updateSweepSpeed(this.value)" class="w-full">
+                        <input type="range" id="sweepSpeedSlider" min="200" max="2000" step="50" value="1000" oninput="updateSweepSpeed(this.value)" class="w-full">
                     </div>
 
                     <div>
@@ -340,7 +340,7 @@
                             <span class="text-slate-400">ENDPOINT DWELL TIME</span>
                             <span id="sweepDwellVal" class="text-neon-yellow font-bold">250 ms</span>
                         </div>
-                        <input type="range" id="sweepDwellSlider" min="0" max="1000" step="50" value="500" oninput="updateSweepDwell(this.value)" class="w-full">
+                        <input type="range" id="sweepDwellSlider" min="0" max="1000" step="50" value="250" oninput="updateSweepDwell(this.value)" class="w-full">
                     </div>
                 </div>
 
